@@ -148,6 +148,27 @@
     if (document.body) render(); else document.addEventListener('DOMContentLoaded', render);
   }
 
+  // داخل الواجهة الموحّدة: القائمة الرئيسية تختفي عند فتح نظام، ويُضاف أعلى قائمة النظام زر للرجوع إليها.
+  // يبحث عن قائمة النظام الجانبية تلقائياً (أو أي عنصر يحمل data-all-sidebar في الأنظمة الجديدة).
+  function injectBackButton() {
+    if (!inShell) return;
+    var sb = document.querySelector('[data-all-sidebar], .docs-sb, aside.sidebar, div.sidebar');
+    if (!sb || sb.querySelector('.all-back')) return;
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'all-back'; b.title = 'الرجوع إلى القائمة الرئيسية';
+    b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span>القائمة الرئيسية</span>';
+    b.onclick = function () { home(); };
+    sb.insertBefore(b, sb.firstChild);
+  }
+  if (inShell) {
+    var _bst = document.createElement('style');
+    _bst.textContent = '.all-back{display:flex;align-items:center;gap:8px;width:100%;padding:12px 1.4rem;border:0;border-bottom:1px solid rgba(255,255,255,.1);' +
+      'background:rgba(0,0,0,.22);color:#fff;font:inherit;font-size:.85rem;font-weight:700;cursor:pointer;text-align:right;flex-shrink:0;transition:background .15s}' +
+      '.all-back:hover{background:rgba(255,255,255,.12)}.all-back svg{flex-shrink:0;opacity:.9}';
+    document.head.appendChild(_bst);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectBackButton); else injectBackButton();
+  }
+
   // ── قاعدة بيانات بأسماء مجموعات مُعاد توجيهها ─────────────
   // يسمح لكود نظام منسوخ أن يبقى كما هو (مثلاً collection('employees'))
   // بينما تُحفظ البيانات فعلياً في مجموعة تحمل بادئة النظام (payroll_employees).

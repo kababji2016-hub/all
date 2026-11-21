@@ -181,6 +181,8 @@ tr:last-child td{border-bottom:0}
 .toast.err{background:var(--red)}
 .toast.ok{background:var(--green)}
 .backdrop{display:none}
+/* عند فتح نظام: تختفي القائمة الرئيسية وتبقى قائمة النظام فقط (وفيها زر الرجوع) */
+@media (min-width:901px){ #app.module-mode .sidebar{display:none} }
 
 @media (max-width:900px){
   #menuBtn{display:inline-flex}
@@ -621,6 +623,7 @@ function route(){
     if (r==='account') { $('acScale').value = getScalePref(); syncNotifyBtn(); }
     if (r==='settings') renderSettings();
   }
+  $('app').classList.toggle('module-mode', !!mod);
   $('reloadBtn').classList.toggle('hidden', !mod);
   $('popBtn').classList.toggle('hidden', !mod);
   document.querySelectorAll('.nav-item[data-route]').forEach(function(b){ b.classList.toggle('active', b.dataset.route===r); });
