@@ -169,6 +169,9 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectBackButton); else injectBackButton();
   }
 
+  // الآلة الحاسبة الموحّدة (اختصار H + مسافة) — تُحمَّل تلقائياً في كل صفحة تستخدم النواة
+  (function () { var s = document.createElement('script'); s.src = '/core/calc.js'; (document.head || document.documentElement).appendChild(s); })();
+
   // ── قاعدة بيانات بأسماء مجموعات مُعاد توجيهها ─────────────
   // يسمح لكود نظام منسوخ أن يبقى كما هو (مثلاً collection('employees'))
   // بينما تُحفظ البيانات فعلياً في مجموعة تحمل بادئة النظام (payroll_employees).
