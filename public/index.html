@@ -218,6 +218,7 @@ tr:last-child td{border-bottom:0}
         <div class="nav-label">الإدارة</div>
         <button class="nav-item" data-route="users" onclick="go('users')"><span class="ico"><i class="fas fa-users-gear"></i></span>المستخدمون والصلاحيات</button>
         <button class="nav-item" data-route="settings" onclick="go('settings')"><span class="ico"><i class="fas fa-sliders"></i></span>إعدادات النظام</button>
+        <button class="nav-item" data-route="migrate" onclick="go('migrate')"><span class="ico"><i class="fas fa-truck-ramp-box"></i></span>نقل البيانات القديمة</button>
       </div>
     </nav>
     <div class="side-foot">
@@ -288,6 +289,8 @@ tr:last-child td{border-bottom:0}
           <button class="btn btn-primary" id="acBtn" onclick="changePassword()"><i class="fas fa-save"></i> تغيير كلمة المرور</button>
         </div>
       </section>
+      <!-- Migrate (admin) -->
+      <iframe class="frame hidden view" id="v-migrate" title="نقل البيانات القديمة" style="padding:0"></iframe>
       <!-- module iframes are appended here -->
     </div>
   </div>
@@ -477,7 +480,7 @@ window.addEventListener('message', function(e){
 function route(){
   if (!me) return;
   var r = (location.hash||'').replace(/^#\/?/,'') || 'home';
-  var adminViews = ['users','settings'];
+  var adminViews = ['users','settings','migrate'];
   if (adminViews.indexOf(r)!==-1 && !C.isAdmin(me)) r='home';
   var modId = r.indexOf('m/')===0 ? r.slice(2) : null;
   var mod = modId ? C.getModule(modId) : null;
@@ -502,7 +505,8 @@ function route(){
   } else {
     var v=$('v-'+r) || $('v-home');
     v.classList.remove('hidden');
-    $('pageTitle').textContent = {home:'الرئيسية',users:'المستخدمون والصلاحيات',settings:'إعدادات النظام',account:'حسابي'}[r] || 'الرئيسية';
+    $('pageTitle').textContent = {home:'الرئيسية',users:'المستخدمون والصلاحيات',settings:'إعدادات النظام',account:'حسابي',migrate:'نقل البيانات القديمة'}[r] || 'الرئيسية';
+    if (r==='migrate' && !v.getAttribute('src')) v.setAttribute('src','/admin/migrate.html');
     if (r==='users') loadUsers();
     if (r==='settings') renderSettings();
   }

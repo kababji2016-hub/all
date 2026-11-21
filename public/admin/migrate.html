@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نقل البيانات القديمة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="/core/firebase-config.js"></script>
+<script src="/core/modules.js"></script>
+<script src="/core/core.js"></script>
+<style>
+:root{--bg:#f3f6fb;--card:#fff;--text:#0f2240;--text2:#4a5a78;--text3:#8a97b0;--border:#e3e9f3;--accent:#2a7de1;--green:#22a861;--red:#e03131;--orange:#e8590c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);padding:24px;direction:rtl}
+.wrap{max-width:980px;margin:0 auto}
+h1{font-size:1.4rem;font-weight:900;margin-bottom:4px}
+.sub{color:var(--text2);margin-bottom:18px;line-height:1.8}
+.note{background:#e8f3ff;border:1px solid #c6e0ff;color:#174a85;border-radius:12px;padding:12px 14px;font-size:.88rem;line-height:1.9;margin-bottom:18px}
+.warn{background:#fff8e6;border-color:#ffe2a8;color:#8a5a00}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:14px}
+.card-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.card-head input{width:20px;height:20px;accent-color:var(--accent)}
+.card-head h3{font-size:1.05rem;font-weight:800;flex:1}
+.card-head .src{font-size:.75rem;color:var(--text3);font-family:monospace}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:right;color:var(--text3);font-weight:700;font-size:.76rem;padding:7px 8px;border-bottom:1px solid var(--border)}
+td{padding:7px 8px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:0}
+td.n{font-weight:800;font-variant-numeric:tabular-nums}
+.ok{color:var(--green)}.bad{color:var(--red)}.mid{color:var(--orange)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border:0;border-radius:12px;font:inherit;font-weight:700;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-go{background:var(--green);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+#log{background:#0f1f38;color:#cfe0ff;border-radius:14px;padding:14px;font-family:Consolas,monospace;font-size:.82rem;line-height:1.8;max-height:320px;overflow-y:auto;white-space:pre-wrap;display:none}
+.hidden{display:none}
+@media(max-width:600px){body{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap" id="root" style="display:none">
+  <h1><i class="fas fa-truck-ramp-box" style="color:var(--accent)"></i> نقل البيانات من الأنظمة القديمة</h1>
+  <p class="sub">تقرأ هذه الصفحة من الأنظمة القديمة <b>للقراءة فقط</b> — لا تكتب فيها ولا تحذف منها شيئاً — وتكتب نسخة في قاعدة النظام الشامل.</p>
+  <div class="note">
+    <b>كيف تعمل:</b> ① اضغط <b>معاينة</b> لعرض ما سيُنقل من كل نظام. ② اختر الأنظمة واضغط <b>بدء النقل</b>.
+    ③ تظهر مطابقة الأعداد والمبالغ بين القديم والجديد.<br>
+    كل سجل يُحفظ بمعرّفه القديم، لذلك <b>إعادة النقل لا تكرّر البيانات</b> — بل تحدّثها بآخر نسخة من القديم.
+  </div>
+  <div class="note warn hidden" id="targetWarn"></div>
+
+  <div id="cards"></div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btnPreview" onclick="preview()"><i class="fas fa-magnifying-glass"></i> معاينة</button>
+    <button class="btn btn-go" id="btnRun" onclick="run()" disabled><i class="fas fa-play"></i> بدء النقل</button>
+  </div>
+  <div id="log"></div>
+</div>
+
+<script>
+'use strict';
+// ── مصادر البيانات القديمة (قراءة فقط) ─────────────────────
+var OLD = {
+  finance: { apiKey:"AIzaSyCnFF-JuLhMr1awTkn3eM2tnm-NrBp0UGg", authDomain:"cash-register-app-b43fd.firebaseapp.com", projectId:"cash-register-app-b43fd",
+             storageBucket:"cash-register-app-b43fd.firebasestorage.app", messagingSenderId:"856646642050", appId:"1:856646642050:web:a22e9922f6b5a7c264479b" },
+  payroll: { apiKey:"AIzaSyD9stKmvEzHtQRVbu2tlOELlUHyFaZq4og", authDomain:"rwateb-kebabji-foundation.firebaseapp.com", projectId:"rwateb-kebabji-foundation",
+             storageBucket:"rwateb-kebabji-foundation.firebasestorage.app", messagingSenderId:"39769510928", appId:"1:39769510928:web:18beba17d78992ef0f6695" },
+  journal: { apiKey:"AIzaSyCqifkVeVdEW4qHTcTw4bPn-qfKZAixZQE", authDomain:"kababji-daily-journal.firebaseapp.com", projectId:"kababji-daily-journal",
+             storageBucket:"kababji-daily-journal.firebasestorage.app", messagingSenderId:"991177910219", appId:"1:991177910219:web:b09fd81f27ae1bda58784e" }
+};
+var DOCS_GAS = 'https://script.google.com/macros/s/AKfycbzbS_8hiYMRqpksyh1QjRQeZe4hAuWnNYUsKSFmRCL7zPeEDwOggSyv6Hb-nfYX9F83/exec';
+var DEFAULT_DOC_TYPES = [
+  { key: 'اقامات', icon: '🪪', label: 'إقامة' },
+  { key: 'التامين الطبي', icon: '🏥', label: 'تأمين طبي' },
+  { key: 'عقود العمل', icon: '📄', label: 'عقد عمل' },
+  { key: 'السجلات والرخص', icon: '📜', label: 'رخصة / سجل' }
+];
+var MIGRATOR = 'نقل من النظام القديم';
+
+// كل خطوة نقل: من أين → إلى أين
+var PLAN = {
+  finance: { title:'الخزينة', icon:'fa-cash-register', src:'cash-register-app-b43fd', steps:[
+    { from:'cr_entries', to:'finance_entries', label:'العمليات' },
+    { from:'cr_logs',    to:'finance_logs',    label:'سجل النشاطات' },
+    { from:'app',        to:'finance_config',  label:'الفروع والأصناف', onlyDoc:'main', pick:['branches','revCats','cusCats','expCats','updatedAt'] }
+  ]},
+  payroll: { title:'الرواتب', icon:'fa-file-invoice-dollar', src:'rwateb-kebabji-foundation', steps:[
+    { from:'employees',  to:'payroll_employees',  label:'الموظفون' },
+    { from:'loans',      to:'payroll_loans',      label:'السلف والقروض' },
+    { from:'deductions', to:'payroll_deductions', label:'الخصومات' },
+    { from:'branches',   to:'payroll_branches',   label:'الفروع' },
+    { from:'payroll_settings', to:'payroll_settings', label:'إعدادات المنشأة', onlyDoc:'main' },
+    { from:'payroll_deliveries', to:'payroll_deliveries', label:'الأشهر المُرحّلة' },
+    { from:'payroll_history_details', to:'payroll_history_details', label:'أرشيف القسائم' }
+  ]},
+  docs: { title:'الوثائق والمهام', icon:'fa-bell', src:'Google Sheets (Apps Script)', steps:[
+    { gas:'list',       to:'docs_documents', label:'الوثائق' },
+    { gas:'list_tasks', to:'docs_tasks',     label:'المهام' },
+    { gas:'types',      to:'docs_settings',  label:'أنواع الوثائق' }
+  ]},
+  journal: { title:'يوميات الفروع', icon:'fa-book-open', src:'kababji-daily-journal', steps:[
+    { from:'journal_entries', to:'journal_entries',  label:'اليوميات' },
+    { from:'settings',        to:'journal_settings', label:'الفروع', onlyDoc:'main', pick:['branches'] }
+  ]}
+};
+
+var C = window.AllCore, db = C.db, data = {}, oldDbs = {};
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function log(msg, cls){
+  var el=$('log'); el.style.display='block';
+  var line=document.createElement('div'); if(cls) line.className=cls;
+  line.textContent='['+new Date().toLocaleTimeString('en-GB')+'] '+msg;
+  el.appendChild(line); el.scrollTop=el.scrollHeight;
+}
+function fmt(n){ return Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
+
+function oldDb(key){
+  if (!oldDbs[key]) {
+    var app = firebase.apps.filter(function(a){return a.name==='old_'+key;})[0] || firebase.initializeApp(OLD[key], 'old_'+key);
+    oldDbs[key] = app.firestore();
+  }
+  return oldDbs[key];
+}
+function hash(s){ var h=5381; for (var i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return h.toString(36); }
+
+// ── القراءة من القديم ─────────────────────────────────────
+function readStep(sys, st){
+  if (st.gas) return readGas(st);
+  var col = oldDb(sys).collection(st.from);
+  var p = st.onlyDoc ? col.doc(st.onlyDoc).get().then(function(d){ return d.exists ? [d] : []; })
+                     : col.get().then(function(s){ return s.docs; });
+  return p.then(function(docs){
+    return docs.map(function(d){
+      var x = d.data();
+      if (st.pick) { var y={}; st.pick.forEach(function(k){ if (x[k]!==undefined) y[k]=x[k]; }); x=y; }
+      return { id: d.id, data: x };
+    });
+  });
+}
+var _gasCache = {};
+function gasGet(action){
+  if (!_gasCache[action]) {
+    var url = DOCS_GAS + '?' + (action==='list' ? '' : 'action='+action+'&') + 't=' + Date.now();
+    _gasCache[action] = fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+  }
+  return _gasCache[action];
+}
+function readGas(st){
+  if (st.gas==='list') return gasGet('list').then(function(rows){
+    return rows.filter(function(r){ return r.name && r.expiry; }).map(function(r){
+      return { id:'legacy_'+hash(String(r.type)+'#'+r.rowNum), data:{
+        type:r.type||'', name:r.name||'', branch:(r.branch&&r.branch!=='—')?r.branch:'', expiry:String(r.expiry).substring(0,10),
+        createdAt:new Date().toISOString(), createdBy:MIGRATOR, legacyRow:String(r.type)+'#'+r.rowNum } };
+    });
+  });
+  if (st.gas==='list_tasks') return gasGet('list_tasks').then(function(rows){
+    return (Array.isArray(rows)?rows:[]).filter(function(t){ return t.name; }).map(function(t){
+      return { id:'legacy_task_'+t.rowNum, data:{ name:t.name, date:String(t.date||'').substring(0,10), createdAt:new Date().toISOString(), createdBy:MIGRATOR } };
+    });
+  });
+  if (st.gas==='types') return gasGet('list').then(function(rows){
+    var list = DEFAULT_DOC_TYPES.map(function(t){ return Object.assign({}, t); });
+    var keys = list.map(function(t){ return t.key; });
+    rows.forEach(function(r){ if (r.type && keys.indexOf(r.type)===-1) { keys.push(r.type); list.push({ key:r.type, icon:'📁', label:r.type }); } });
+    return [{ id:'types', data:{ list:list } }];
+  });
+}
+
+// ── المعاينة ─────────────────────────────────────────────
+function renderCards(){
+  $('cards').innerHTML = Object.keys(PLAN).map(function(sys){
+    var p = PLAN[sys];
+    return '<div class="card"><div class="card-head"><input type="checkbox" id="sel_'+sys+'" checked>'+
+      '<i class="fas '+p.icon+'" style="color:var(--accent)"></i><h3>'+esc(p.title)+'</h3><span class="src">'+esc(p.src)+'</span></div>'+
+      '<table><thead><tr><th>البيان</th><th>في القديم</th><th>موجود حالياً في الجديد</th><th>بعد النقل</th></tr></thead><tbody>'+
+      p.steps.map(function(st,i){ return '<tr><td>'+esc(st.label)+' <span class="src" style="color:var(--text3);font-size:.72rem">→ '+esc(st.to)+'</span></td>'+
+        '<td class="n" id="o_'+sys+'_'+i+'">—</td><td class="n" id="t_'+sys+'_'+i+'">—</td><td class="n" id="a_'+sys+'_'+i+'">—</td></tr>'; }).join('')+
+      '</tbody></table><div id="extra_'+sys+'" style="margin-top:8px;font-size:.84rem;color:var(--text2)"></div></div>';
+  }).join('');
+}
+function countTarget(st){
+  var col = db.collection(st.to);
+  if (st.onlyDoc || st.gas==='types') return col.doc(st.onlyDoc||'types').get().then(function(d){ return d.exists?1:0; });
+  return col.get().then(function(s){ return s.size; });
+}
+function preview(){
+  $('btnPreview').disabled=true; $('btnRun').disabled=true; data={};
+  log('بدء المعاينة — قراءة فقط...');
+  var nonEmpty=[];
+  var jobs=[];
+  Object.keys(PLAN).forEach(function(sys){
+    data[sys]=[];
+    PLAN[sys].steps.forEach(function(st,i){
+      jobs.push(readStep(sys,st).then(function(items){
+        data[sys][i]=items; $('o_'+sys+'_'+i).textContent=fmt(items.length);
+      }).catch(function(e){ data[sys][i]=null; $('o_'+sys+'_'+i).innerHTML='<span class="bad">تعذّر</span>'; log('✖ '+PLAN[sys].title+' / '+st.label+': '+e.message,'bad'); }));
+      jobs.push(countTarget(st).then(function(n){
+        $('t_'+sys+'_'+i).textContent=fmt(n);
+        if (n>0 && !st.onlyDoc && !st.gas) nonEmpty.push(PLAN[sys].title+' / '+st.label);
+      }).catch(function(e){ $('t_'+sys+'_'+i).innerHTML='<span class="bad">تعذّر</span>'; log('✖ قراءة الجديد '+st.to+': '+e.message,'bad'); }));
+    });
+  });
+  Promise.all(jobs).then(function(){
+    renderExtras(false);
+    if (nonEmpty.length) {
+      $('targetWarn').classList.remove('hidden');
+      $('targetWarn').innerHTML='<b>تنبيه:</b> توجد بيانات مُدخلة مسبقاً في النظام الجديد في: '+esc(nonEmpty.join('، '))+
+        '. النقل لن يحذفها — سيضيف بيانات القديم بجانبها (ويحدّث السجلات التي تحمل نفس المعرّف إن وُجدت).';
+    }
+    log('✔ انتهت المعاينة. راجع الأعداد ثم اضغط "بدء النقل".','ok');
+    $('btnPreview').disabled=false; $('btnRun').disabled=false;
+  });
+}
+
+// المطابقة المالية للخزينة + ملخصات إضافية
+function financeSums(entries){
+  var s={revenue:0,expense:0,custody:0,rollover:0};
+  entries.forEach(function(e){ var t=e.type; if (s[t]!==undefined) s[t]+=(+e.amount||0); });
+  return s;
+}
+function payrollSums(emps){ return emps.reduce(function(a,e){ return a+(+e.basic||0); },0); }
+function renderExtras(after){
+  var f = data.finance && data.finance[0];
+  if (f) {
+    var s = financeSums(f.map(function(x){return x.data;}));
+    var html = 'مجاميع العمليات في القديم — إيرادات: <b>'+fmt(s.revenue)+'</b> · مصروفات: <b>'+fmt(s.expense)+'</b> · عهدة: <b>'+fmt(s.custody)+'</b> · مرحّل: <b>'+fmt(s.rollover)+'</b>';
+    $('extra_finance').innerHTML = html + (after ? '<div id="extra_finance_after"></div>' : '');
+  }
+  var p = data.payroll && data.payroll[0];
+  if (p) $('extra_payroll').innerHTML = 'مجموع الرواتب الأساسية في القديم: <b>'+fmt(payrollSums(p.map(function(x){return x.data;})))+'</b>' + (after ? '<div id="extra_payroll_after"></div>' : '');
+}
+
+// ── النقل ────────────────────────────────────────────────
+function writeAll(toCol, items){
+  var chunks=[]; for (var i=0;i<items.length;i+=400) chunks.push(items.slice(i,i+400));
+  return chunks.reduce(function(p,chunk){
+    return p.then(function(){
+      var b=db.batch();
+      chunk.forEach(function(it){ b.set(db.collection(toCol).doc(String(it.id)), it.data, { merge:true }); });
+      return b.commit();
+    });
+  }, Promise.resolve());
+}
+function run(){
+  var systems = Object.keys(PLAN).filter(function(sys){ return $('sel_'+sys).checked; });
+  if (!systems.length) return alert('اختر نظاماً واحداً على الأقل');
+  var summary = systems.map(function(sys){
+    return PLAN[sys].title+': '+PLAN[sys].steps.map(function(st,i){ return st.label+' '+((data[sys][i]||[]).length); }).join('، ');
+  }).join('\n');
+  if (!confirm('سيتم نسخ البيانات التالية إلى النظام الشامل:\n\n'+summary+'\n\nالأنظمة القديمة لن تتأثر. متابعة؟')) return;
+  $('btnRun').disabled=true; $('btnPreview').disabled=true;
+  log('بدء النقل...');
+  var p = Promise.resolve(), errors=0;
+  systems.forEach(function(sys){
+    PLAN[sys].steps.forEach(function(st,i){
+      p = p.then(function(){
+        var items = data[sys][i];
+        if (items===null) { errors++; log('⚠ تخطّي '+PLAN[sys].title+' / '+st.label+' (تعذّرت القراءة)','mid'); return; }
+        if (!items.length) { log('— '+PLAN[sys].title+' / '+st.label+': لا شيء لنقله'); return; }
+        if (st.gas==='types') {
+          // ادمج مع الأنواع الموجودة في الجديد إن وُجدت
+          return db.collection('docs_settings').doc('types').get().then(function(d){
+            var cur = (d.exists && d.data().list) || [];
+            var keys = cur.map(function(t){return t.key;});
+            items[0].data.list.forEach(function(t){ if (keys.indexOf(t.key)===-1) cur.push(t); });
+            return db.collection('docs_settings').doc('types').set({ list:cur });
+          }).then(function(){ log('✔ '+PLAN[sys].title+' / '+st.label+': '+items[0].data.list.length+' نوع','ok'); });
+        }
+        log('… '+PLAN[sys].title+' / '+st.label+': نقل '+items.length+' سجل');
+        return writeAll(st.to, items).then(function(){ log('✔ '+PLAN[sys].title+' / '+st.label+': تم','ok'); });
+      }).catch(function(e){ errors++; log('✖ '+PLAN[sys].title+' / '+st.label+': '+e.message,'bad'); });
+    });
+  });
+  p.then(function(){ return verify(systems); }).then(function(){
+    log(errors ? ('انتهى النقل مع '+errors+' خطأ — راجع السجل أعلاه') : '✔✔ انتهى النقل بنجاح', errors?'bad':'ok');
+    $('btnPreview').disabled=false; $('btnRun').disabled=false;
+  });
+}
+
+// ── المطابقة بعد النقل ───────────────────────────────────
+function verify(systems){
+  log('مطابقة الأعداد بين القديم والجديد...');
+  renderExtras(true);
+  var jobs=[];
+  systems.forEach(function(sys){
+    PLAN[sys].steps.forEach(function(st,i){
+      var items=data[sys][i]; if (!items) return;
+      if (st.onlyDoc || st.gas==='types') {
+        jobs.push(countTarget(st).then(function(n){ $('a_'+sys+'_'+i).innerHTML = n ? '<span class="ok">✔ موجود</span>' : (items.length?'<span class="bad">✖ مفقود</span>':'—'); }));
+        return;
+      }
+      var ids={}; items.forEach(function(it){ ids[String(it.id)]=1; });
+      jobs.push(db.collection(st.to).get().then(function(s){
+        var found=0, rows=[]; s.forEach(function(d){ if (ids[d.id]) { found++; rows.push(d.data()); } });
+        var ok = found===items.length;
+        $('a_'+sys+'_'+i).innerHTML = '<span class="'+(ok?'ok':'bad')+'">'+(ok?'✔ ':'✖ ')+fmt(found)+' / '+fmt(items.length)+'</span>';
+        if (sys==='finance' && i===0) {
+          var a=financeSums(rows), b=financeSums(items.map(function(x){return x.data;}));
+          var same = ['revenue','expense','custody','rollover'].every(function(k){ return Math.abs(a[k]-b[k])<0.005; });
+          $('extra_finance_after').innerHTML = '<div style="margin-top:4px" class="'+(same?'ok':'bad')+'">'+(same?'✔ ':'✖ ')+
+            'المجاميع في الجديد — إيرادات: <b>'+fmt(a.revenue)+'</b> · مصروفات: <b>'+fmt(a.expense)+'</b> · عهدة: <b>'+fmt(a.custody)+'</b> · مرحّل: <b>'+fmt(a.rollover)+'</b></div>';
+        }
+        if (sys==='payroll' && i===0) {
+          var x=payrollSums(rows), y=payrollSums(items.map(function(z){return z.data;}));
+          $('extra_payroll_after').innerHTML = '<div style="margin-top:4px" class="'+(Math.abs(x-y)<0.005?'ok':'bad')+'">'+(Math.abs(x-y)<0.005?'✔ ':'✖ ')+'مجموع الرواتب الأساسية في الجديد: <b>'+fmt(x)+'</b></div>';
+        }
+      }));
+    });
+  });
+  return Promise.all(jobs).catch(function(e){ log('✖ المطابقة: '+e.message,'bad'); });
+}
+
+// ── الدخول: مدير النظام فقط ──────────────────────────────
+C.session().then(function(s){
+  if (!s) { window.top.location.href='/'; return; }
+  if (!C.isAdmin(s.profile)) { document.body.innerHTML='<div class="wrap"><h1>🔒 هذه الصفحة لمدير النظام فقط</h1></div>'; return; }
+  $('root').style.display='block';
+  renderCards();
+});
+</script>
+</body>
+</html>
