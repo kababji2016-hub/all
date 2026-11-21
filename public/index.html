@@ -19,6 +19,7 @@
 <script src="/core/firebase-config.js"></script>
 <script src="/core/modules.js"></script>
 <script src="/core/core.js"></script>
+<script src="/core/shared.js"></script>
 <style>
 :root{
   --navy:#0f2942; --navy2:#173553; --navy3:#1f4063;
@@ -113,6 +114,39 @@ button,input,select{font-family:inherit}
 .mod-card p{color:var(--text3);font-size:.85rem;line-height:1.7}
 .mod-card .go{margin-top:14px;font-size:.84rem;font-weight:700;color:var(--c)}
 .empty{text-align:center;color:var(--text3);padding:50px 20px}
+/* ===== مركز التنبيهات ===== */
+.bell-wrap{position:relative}
+.bell-badge{position:absolute;top:-4px;left:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+.alerts-pop{position:absolute;top:calc(100% + 8px);left:0;width:380px;max-width:calc(100vw - 24px);max-height:70vh;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 18px 50px rgba(15,34,64,.2);z-index:80}
+.ap-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff}
+.link-btn{border:0;background:none;color:var(--accent);font-weight:700;font-size:.8rem;cursor:pointer;display:inline-flex;gap:5px;align-items:center}
+.al-item{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;border-right:4px solid transparent}
+.al-item:hover{background:#f7f9fc}
+.al-item.danger{border-right-color:var(--red)}.al-item.warning{border-right-color:var(--orange)}.al-item.info{border-right-color:var(--accent)}
+.al-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.9rem}
+.al-item.danger .al-ico{background:#fdecec;color:var(--red)}.al-item.warning .al-ico{background:#fff1e6;color:var(--orange)}.al-item.info .al-ico{background:#e8f1fd;color:var(--accent)}
+.al-body{flex:1;min-width:0}
+.al-title{font-weight:700;font-size:.86rem}
+.al-mod{font-size:.7rem;font-weight:700;color:var(--text3);margin-bottom:1px}
+.al-items{font-size:.76rem;color:var(--text2);margin-top:3px;line-height:1.7}
+.al-empty{padding:26px;text-align:center;color:var(--text3);font-size:.85rem}
+.al-empty i{color:var(--green);font-size:1.4rem;display:block;margin-bottom:6px}
+/* ===== مؤشرات داخل بطاقات الأنظمة ===== */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.kpi b{display:block;font-size:1rem;font-weight:800;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi span{font-size:.68rem;color:var(--text3)}
+.kpi small{display:block;font-size:.62rem;color:var(--text3)}
+.kpi-skel{grid-column:1/-1;font-size:.75rem;color:var(--text3)}
+.mod-alert{position:absolute;top:14px;left:14px;padding:2px 9px;border-radius:20px;font-size:.7rem;font-weight:800;background:#fdecec;color:var(--red)}
+.mod-alert.warning{background:#fff1e6;color:var(--orange)}
+.home-grid{display:grid;grid-template-columns:1fr;gap:18px;margin-top:18px}
+/* ===== الفروع الموحّدة ===== */
+.br-add{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.br-add input{flex:1;min-width:200px;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;font:inherit;outline:none}
+.br-add input:focus{border-color:var(--accent)}
+.use{font-size:.78rem;color:var(--text2)}
+.use b{color:var(--text)}
+
 
 /* ===== Panels / tables ===== */
 .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-bottom:18px}
@@ -224,6 +258,7 @@ tr:last-child td{border-bottom:0}
         <div class="nav-label">الإدارة</div>
         <button class="nav-item" data-route="users" onclick="go('users')"><span class="ico"><i class="fas fa-users-gear"></i></span>المستخدمون والصلاحيات</button>
         <button class="nav-item" data-route="settings" onclick="go('settings')"><span class="ico"><i class="fas fa-sliders"></i></span>إعدادات النظام</button>
+        <button class="nav-item" data-route="branches" onclick="go('branches')"><span class="ico"><i class="fas fa-store"></i></span>الفروع الموحّدة</button>
       </div>
     </nav>
     <div class="side-foot">
@@ -241,6 +276,13 @@ tr:last-child td{border-bottom:0}
     <header class="topbar">
       <button class="icon-btn" id="menuBtn" onclick="toggleMenu()"><i class="fas fa-bars"></i></button>
       <h2 id="pageTitle">الرئيسية</h2>
+      <div class="bell-wrap">
+        <button class="icon-btn" id="bellBtn" title="التنبيهات من كل الأنظمة" onclick="toggleAlerts(event)"><i class="fas fa-bell"></i><span class="bell-badge hidden" id="bellBadge">0</span></button>
+        <div class="alerts-pop hidden" id="alertsPop" onclick="event.stopPropagation()">
+          <div class="ap-head"><b><i class="fas fa-bell" style="color:var(--accent)"></i> التنبيهات من كل الأنظمة</b><button class="link-btn" onclick="refreshAlerts(true)"><i class="fas fa-rotate"></i> تحديث</button></div>
+          <div id="alertsList"><div class="al-empty">جاري الفحص...</div></div>
+        </div>
+      </div>
       <button class="icon-btn hidden" id="reloadBtn" title="إعادة تحميل النظام" onclick="reloadCurrent()"><i class="fas fa-rotate-right"></i></button>
       <button class="icon-btn hidden wide" id="popBtn" title="فتح في نافذة مستقلة" onclick="popCurrent()"><i class="fas fa-up-right-from-square"></i></button>
     </header>
@@ -250,6 +292,15 @@ tr:last-child td{border-bottom:0}
       <section class="view" id="v-home">
         <div class="hello"><h1>مرحباً، <span id="helloName"></span></h1><p>اختر النظام الذي تريد العمل عليه</p></div>
         <div class="cards" id="homeCards"></div>
+        <div class="home-grid">
+          <div class="panel" style="margin:0">
+            <div class="panel-head">
+              <h3><i class="fas fa-bell" style="color:var(--accent)"></i> تنبيهات اليوم من كل الأنظمة</h3>
+              <div style="display:flex;align-items:center;gap:10px"><span id="alertsUpdated" style="font-size:.75rem;color:var(--text3)"></span><button class="link-btn" onclick="refreshAlerts(true)"><i class="fas fa-rotate"></i> تحديث</button></div>
+            </div>
+            <div id="homeAlerts" style="margin:0 -22px -22px"><div class="al-empty">جاري الفحص...</div></div>
+          </div>
+        </div>
       </section>
 
       <!-- Users -->
@@ -306,7 +357,33 @@ tr:last-child td{border-bottom:0}
             </select>
           </div>
         </div>
+        <div class="panel narrow">
+          <div class="panel-head"><h3><i class="fas fa-bell" style="color:var(--accent)"></i> إشعارات المتصفح</h3></div>
+          <p style="color:var(--text2);font-size:.85rem;line-height:1.8;margin-bottom:12px">تظهر لك إشعارات على الجهاز عند وجود تنبيه جديد مهم (وثائق منتهية، رصيد منخفض، مسيّر لم يُرحّل...) ما دام النظام مفتوحاً.</p>
+          <button class="btn btn-light" id="notifyBtn" onclick="toggleBrowserNotify()"><i class="fas fa-bell"></i> <span>تفعيل إشعارات المتصفح</span></button>
+        </div>
       </section>
+      <!-- Branches (admin) -->
+      <section class="view hidden" id="v-branches">
+        <div class="panel">
+          <div class="panel-head">
+            <h3><i class="fas fa-store" style="color:var(--accent)"></i> الفروع الموحّدة لكل الأنظمة</h3>
+            <button class="btn btn-light" onclick="collectBranches()"><i class="fas fa-download"></i> جلب الفروع من الأنظمة</button>
+          </div>
+          <p style="color:var(--text2);font-size:.85rem;line-height:1.9;margin-bottom:14px">
+            قائمة واحدة تظهر في الخزينة والرواتب والوثائق واليوميات. <b>إعادة التسمية</b> تحدّث اسم الفرع في كل السجلات بكل الأنظمة،
+            وإعادة التسمية إلى اسم فرع موجود <b>تدمج</b> الفرعين. الحذف يزيله من القوائم فقط ولا يمس السجلات القديمة.
+          </p>
+          <div class="br-add"><input id="brNew" placeholder="اسم فرع جديد..." onkeydown="if(event.key==='Enter')addBranchCentral()"><button class="btn btn-primary" onclick="addBranchCentral()"><i class="fas fa-plus"></i> إضافة</button></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>الفرع</th><th>الاستخدام في الأنظمة</th><th></th></tr></thead>
+              <tbody id="brBody"><tr><td colspan="3" style="text-align:center;color:var(--text3)">جاري التحميل...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- module iframes are appended here -->
     </div>
   </div>
@@ -482,6 +559,8 @@ function enterApp(profile){
     }
   }, function(){});
   route();
+  refreshAlerts();
+  clearInterval(_alertsTimer); _alertsTimer = setInterval(function(){ refreshAlerts(); }, 5*60*1000);
 }
 
 function renderNav(){
@@ -493,8 +572,10 @@ function renderNav(){
   $('homeCards').innerHTML = mods.length ? mods.map(function(m){
     return '<div class="mod-card" style="--c:'+esc(m.color)+'" onclick="go(\'m/'+esc(m.id)+'\')">'+
       '<div class="ico"><i class="fas '+esc(m.icon)+'"></i></div><h3>'+esc(m.title)+'</h3><p>'+esc(m.description||'')+'</p>'+
+      '<span class="mod-alert hidden" id="chip-'+esc(m.id)+'"></span><div class="kpis" id="kpis-'+esc(m.id)+'"><div class="kpi-skel">جاري تحميل الأرقام...</div></div>'+
       '<div class="go">دخول <i class="fas fa-arrow-left fa-sm"></i></div></div>';
   }).join('') : '<div class="empty"><i class="fas fa-lock fa-2x" style="margin-bottom:10px"></i><div>لم تُمنح صلاحية لأي نظام بعد — راجع مدير النظام.</div></div>';
+  renderKpis(lastAlerts);
 }
 
 // ── routing ──────────────────────────────────────────────
@@ -508,7 +589,7 @@ window.addEventListener('message', function(e){
 function route(){
   if (!me) return;
   var r = (location.hash||'').replace(/^#\/?/,'') || 'home';
-  var adminViews = ['users','settings'];
+  var adminViews = ['users','settings','branches'];
   if (adminViews.indexOf(r)!==-1 && !C.isAdmin(me)) r='home';
   var modId = r.indexOf('m/')===0 ? r.slice(2) : null;
   var mod = modId ? C.getModule(modId) : null;
@@ -533,9 +614,11 @@ function route(){
   } else {
     var v=$('v-'+r) || $('v-home');
     v.classList.remove('hidden');
-    $('pageTitle').textContent = {home:'الرئيسية',users:'المستخدمون والصلاحيات',settings:'إعدادات النظام',account:'حسابي'}[r] || 'الرئيسية';
+    $('pageTitle').textContent = {home:'الرئيسية',users:'المستخدمون والصلاحيات',settings:'إعدادات النظام',account:'حسابي',branches:'الفروع الموحّدة'}[r] || 'الرئيسية';
+    if (r==='branches') loadBranchesPage();
+    if (r==='home' && lastAlerts) renderKpis(lastAlerts);
     if (r==='users') loadUsers();
-    if (r==='account') $('acScale').value = getScalePref();
+    if (r==='account') { $('acScale').value = getScalePref(); syncNotifyBtn(); }
     if (r==='settings') renderSettings();
   }
   $('reloadBtn').classList.toggle('hidden', !mod);
@@ -666,6 +749,128 @@ function setActive(uid, active){
   if (!active && !confirm('إيقاف حساب "'+(u&&u.name)+'"؟ لن يستطيع الدخول لأي نظام.')) return;
   C.db.collection('core_users').doc(uid).update({active:active})
     .then(function(){ toast(active?'تم تفعيل الحساب ✓':'تم إيقاف الحساب','ok'); loadUsers(); })
+    .catch(function(e){ toast(authErr(e),'err'); });
+}
+
+
+// ── مركز التنبيهات والمؤشرات الموحّد ─────────────────────
+var lastAlerts = null, _alertsTimer = null;
+function refreshAlerts(manual){
+  if (!window.AllShared || !me) return;
+  AllShared.alerts.collect(me).then(function(res){
+    lastAlerts = res;
+    renderAlerts(res); renderKpis(res); maybeNotify(res);
+    $('alertsUpdated').textContent = 'آخر فحص ' + new Date().toLocaleTimeString('ar-SA-u-nu-latn',{hour:'2-digit',minute:'2-digit'});
+    if (manual) toast('تم تحديث التنبيهات','ok');
+  });
+}
+function alertHtml(a){
+  var items = a.items || [];
+  var shown = items.slice(0,4).map(esc).join('<br>') + (items.length>4 ? '<br>و'+(items.length-4)+' أخرى...' : '');
+  return '<div class="al-item '+a.level+'" onclick="openAlert(\''+esc(a.module)+'\')">'+
+    '<div class="al-ico"><i class="fas '+esc(a.icon||'fa-bell')+'"></i></div>'+
+    '<div class="al-body"><div class="al-mod">'+esc(a.moduleTitle)+'</div><div class="al-title">'+esc(a.title)+'</div>'+
+    (shown ? '<div class="al-items">'+shown+'</div>' : '')+'</div></div>';
+}
+function renderAlerts(res){
+  var list = res.alerts || [];
+  var important = list.filter(function(a){ return a.level!=='info'; }).length;
+  var badge = $('bellBadge');
+  badge.textContent = list.length; badge.classList.toggle('hidden', !list.length);
+  badge.style.background = important ? 'var(--red)' : 'var(--accent)';
+  var html = list.length ? list.map(alertHtml).join('') :
+    '<div class="al-empty"><i class="fas fa-circle-check"></i>لا توجد تنبيهات — كل شيء على ما يرام</div>';
+  $('alertsList').innerHTML = html; $('homeAlerts').innerHTML = html;
+}
+function renderKpis(res){
+  if (!res) return;
+  allowedModules().forEach(function(m){
+    var box = $('kpis-'+m.id), chip = $('chip-'+m.id), r = res.byModule[m.id];
+    if (!box || !r) return;
+    box.innerHTML = (r.kpis||[]).map(function(k){
+      return '<div class="kpi"><b style="color:'+esc(k.color||'var(--text)')+'">'+esc(k.value)+'</b><span>'+esc(k.label)+'</span>'+(k.hint?'<small>'+esc(k.hint)+'</small>':'')+'</div>';
+    }).join('') || (r.error ? '<div class="kpi-skel">تعذّر التحميل</div>' : '');
+    var al = r.alerts||[], danger = al.filter(function(a){return a.level==='danger';}).length, warn = al.filter(function(a){return a.level==='warning';}).length;
+    if (chip) { chip.className = 'mod-alert' + (danger ? '' : ' warning') + ((danger||warn) ? '' : ' hidden');
+      chip.innerHTML = '<i class="fas fa-bell"></i> ' + (danger+warn); }
+  });
+}
+function openAlert(moduleId){ $('alertsPop').classList.add('hidden'); go('m/'+moduleId); }
+function toggleAlerts(e){ e.stopPropagation(); $('alertsPop').classList.toggle('hidden'); }
+document.addEventListener('click', function(){ var p=$('alertsPop'); if (p) p.classList.add('hidden'); });
+
+// إشعارات المتصفح للتنبيهات الجديدة المهمة
+var NOTIFY_KEY = 'all_browser_notify', SEEN_KEY = 'all_alerts_seen';
+function notifyOn(){ try { return localStorage.getItem(NOTIFY_KEY)==='1' && 'Notification' in window && Notification.permission==='granted'; } catch(e){ return false; } }
+function syncNotifyBtn(){ var b=$('notifyBtn'); if(!b) return; b.querySelector('span').textContent = notifyOn() ? 'إيقاف إشعارات المتصفح' : 'تفعيل إشعارات المتصفح'; }
+function toggleBrowserNotify(){
+  if (!('Notification' in window)) return toast('المتصفح لا يدعم الإشعارات','err');
+  if (notifyOn()) { try{ localStorage.setItem(NOTIFY_KEY,'0'); }catch(e){} syncNotifyBtn(); return toast('تم إيقاف إشعارات المتصفح','ok'); }
+  Notification.requestPermission().then(function(p){
+    if (p!=='granted') return toast('لم يُسمح بالإشعارات من المتصفح','err');
+    try{ localStorage.setItem(NOTIFY_KEY,'1'); }catch(e){}
+    syncNotifyBtn(); toast('تم تفعيل إشعارات المتصفح ✓','ok');
+  });
+}
+function maybeNotify(res){
+  if (!notifyOn()) return;
+  var day = new Date().toLocaleDateString('en-CA'), seen = {};
+  try { var s = JSON.parse(localStorage.getItem(SEEN_KEY)||'{}'); if (s.day===day) seen = s.keys||{}; } catch(e){}
+  (res.alerts||[]).filter(function(a){ return a.level!=='info'; }).forEach(function(a){
+    var key = a.module+'|'+a.title;
+    if (seen[key]) return; seen[key]=1;
+    try { new Notification(a.title, { body: a.moduleTitle + ((a.items&&a.items[0]) ? ' — ' + a.items[0] : ''), icon:'/icons/portal-192.png', tag:key }); } catch(e){}
+  });
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify({day:day, keys:seen})); } catch(e){}
+}
+
+// ── الفروع الموحّدة (للمدير) ─────────────────────────────
+var _brWatch = null;
+function loadBranchesPage(){
+  if (!window.AllShared) return;
+  if (!_brWatch) _brWatch = AllShared.branches.watch(function(names){ if (currentRoute==='branches') renderBranchRows(names); });
+  AllShared.branches.ready().then(function(names){
+    if (!names.length) collectBranches(true); else renderBranchRows(names);
+  });
+}
+function renderBranchRows(names){
+  $('brBody').innerHTML = names.length ? names.map(function(n, i){
+    return '<tr><td><b>'+esc(n)+'</b></td><td class="use" id="use-'+i+'"><span style="color:var(--text3)">...</span></td>'+
+      '<td><div class="row-actions"><button class="btn btn-light" onclick="renameBranchCentral('+i+')"><i class="fas fa-pen"></i> تسمية / دمج</button>'+
+      '<button class="btn btn-danger" onclick="removeBranchCentral('+i+')"><i class="fas fa-trash"></i> حذف</button></div></td></tr>';
+  }).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--text3)">لا توجد فروع بعد</td></tr>';
+  window._brNames = names;
+  names.forEach(function(n, i){
+    AllShared.branches.usage(n).then(function(u){
+      var cell = $('use-'+i); if (!cell || window._brNames[i]!==n) return;
+      var parts = allowedModules().filter(function(m){ return u[m.id]!==undefined && (m.branchRefs||[]).length; })
+        .map(function(m){ return esc(m.title)+': <b>'+u[m.id]+'</b>'; });
+      cell.innerHTML = parts.join(' · ') || '—';
+    });
+  });
+}
+function addBranchCentral(){
+  var n = $('brNew').value.trim(); if (!n) return;
+  AllShared.branches.add(n).then(function(){ $('brNew').value=''; toast('تمت إضافة الفرع لكل الأنظمة ✓','ok'); })
+    .catch(function(e){ toast(authErr(e),'err'); });
+}
+function renameBranchCentral(i){
+  var old = window._brNames[i]; var n = prompt('الاسم الجديد لفرع "'+old+'":\n(إن كتبت اسم فرع موجود سيتم دمج الفرعين)', old);
+  if (!n || !n.trim() || n.trim()===old) return;
+  var merge = window._brNames.indexOf(n.trim())!==-1;
+  if (!confirm((merge?'دمج فرع "'+old+'" في "'+n.trim()+'"':'إعادة تسمية "'+old+'" إلى "'+n.trim()+'"')+'؟\n\nسيتم تحديث اسم الفرع في كل السجلات بكل الأنظمة.')) return;
+  toast('جاري التحديث في كل الأنظمة...');
+  AllShared.branches.rename(old, n.trim()).then(function(r){ toast('تم ✓ — تحديث '+r.updated+' سجل','ok'); })
+    .catch(function(e){ toast(authErr(e),'err'); });
+}
+function removeBranchCentral(i){
+  var n = window._brNames[i];
+  if (!confirm('حذف فرع "'+n+'" من القوائم في كل الأنظمة؟\nالسجلات القديمة تبقى كما هي.')) return;
+  AllShared.branches.remove(n).then(function(){ toast('تم حذف الفرع من القوائم ✓','ok'); }).catch(function(e){ toast(authErr(e),'err'); });
+}
+function collectBranches(silent){
+  if (!silent) toast('جاري جلب الفروع من كل الأنظمة...');
+  AllShared.branches.collectFromModules().then(function(r){ if (!silent) toast('تمت مراجعة '+r.names.length+' اسم فرع'+(r.cleaned?' وتنظيف '+r.cleaned+' سجل من مسافات زائدة':'')+' ✓','ok'); })
     .catch(function(e){ toast(authErr(e),'err'); });
 }
 

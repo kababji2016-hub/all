@@ -15,6 +15,7 @@
 <script src="/core/firebase-config.js"></script>
 <script src="/core/modules.js"></script>
 <script src="/core/core.js"></script>
+<script src="/core/shared.js"></script>
 <style>
   :root {
     --red: #C0392B; --red-light: #FADBD8;
@@ -355,7 +356,8 @@
       </div>
       <div class="form-group">
         <label>اسم الموظف / الوثيقة</label>
-        <input type="text" class="form-control" id="formName" placeholder="أدخل الاسم الكامل...">
+        <input type="text" class="form-control" id="formName" list="employeesList" placeholder="أدخل الاسم الكامل..." oninput="_fillBranchFromEmployee()">
+        <datalist id="employeesList"></datalist>
       </div>
       <div class="form-group">
         <label>الفرع</label>
@@ -1077,7 +1079,9 @@ function syncGregFromHijri() {
 }
 
 function openDocModal(indexOrNull) {
-  const branches = [...new Set(rawData.map(r => r.branch).filter(b => b && b !== '—'))].sort();
+  // النظام الشامل: الفروع الموحّدة + الفروع المستخدمة في الوثائق
+  const branches = [...new Set([...((window.AllShared && AllShared.branches.current()) || []), ...rawData.map(r => r.branch)].filter(b => b && b !== '—'))].sort();
+  _loadEmployeeSuggestions();
   document.getElementById('branchesList').innerHTML = branches.map(b => `<option value="${b}">`).join('');
   populateFormTypeSelect();
   setDateInputMode('g');
@@ -1110,6 +1114,23 @@ function openDocModal(indexOrNull) {
   document.getElementById('docFormModal').style.display = 'flex';
 }
 
+// النظام الشامل: اقتراح أسماء الموظفين من نظام الرواتب وتعبئة الفرع تلقائياً
+let _docEmps = null;
+function _loadEmployeeSuggestions() {
+  if (_docEmps || !window.AllCore || !AllCore.canUse(window.__allProfile, 'payroll')) return;
+  AllCore.db.collection('payroll_employees').get().then(s => {
+    _docEmps = s.docs.map(d => d.data()).filter(e => e.name);
+    const q = v => String(v).replace(/"/g, '&quot;');
+    document.getElementById('employeesList').innerHTML = _docEmps.map(e => '<option value="' + q(e.name) + '">' + q(e.dept || '') + '</option>').join('');
+  }).catch(() => { _docEmps = []; });
+}
+function _fillBranchFromEmployee() {
+  if (!_docEmps) return;
+  const name = document.getElementById('formName').value.trim();
+  const emp = _docEmps.find(e => String(e.name).trim() === name);
+  const br = document.getElementById('formBranch');
+  if (emp && emp.dept && !br.value) br.value = String(emp.dept).trim();
+}
 function closeDocModal() { document.getElementById('docFormModal').style.display = 'none'; }
 
 async function saveDoc() {

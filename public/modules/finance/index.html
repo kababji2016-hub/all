@@ -23,6 +23,7 @@
 <script src="/core/firebase-config.js"></script>
 <script src="/core/modules.js"></script>
 <script src="/core/core.js"></script>
+<script src="/core/shared.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -1340,6 +1341,8 @@
 
     function applyFirestoreConfig(data) {
       branches = (data.branches && data.branches.length) ? data.branches : branches;
+      // النظام الشامل: الفروع موحّدة — ارفع فروع الخزينة للقائمة الموحّدة واعتمد القائمة الموحّدة
+      if (window.AllShared) { AllShared.branches.ensure(data.branches || []); const _cb = AllShared.branches.current(); if (_cb && _cb.length) branches = _cb; }
       revCats  = (data.revCats  && data.revCats.length)  ? data.revCats  : revCats;
       expCats  = (data.expCats  && data.expCats.length)  ? data.expCats  : expCats;
       cusCats  = (data.cusCats  && data.cusCats.length)  ? data.cusCats  : cusCats;
@@ -1368,6 +1371,7 @@
     }
 
     function applyEntriesSnapshot(items) {
+      window._finSynced = true;
       entries = items.slice().sort((a, b) => String(b.date||'').localeCompare(String(a.date||'')) || (b.id||0) - (a.id||0));
       localStorage.setItem(STORAGE_KEYS.entries, JSON.stringify(entries));
       renderEntries();
@@ -1933,8 +1937,15 @@
         role: AllCore.moduleRole(profile, 'finance') === 'admin' ? 'admin' : 'employee',
         active: true
       };
+      window.__allProfile = profile;
       showAppPage();
       setTimeout(setupRealtimeListener, 300);
+      // النظام الشامل: أي تغيير في الفروع الموحّدة يظهر فوراً هنا
+      if (window.AllShared) AllShared.branches.watch(function (names) {
+        if (!names.length) return;
+        branches = names; localStorage.setItem(STORAGE_KEYS.branches, JSON.stringify(branches));
+        try { renderBranchOptions(); } catch (e) {}
+      });
     }
 
     function renderBranchOptions() {
@@ -2063,6 +2074,18 @@
       return affected;
     }
 
+    // النظام الشامل: نشر رصيد الخزينة لمركز التنبيهات ولوحة الواجهة الرئيسية
+    var _cashPubTimer = null, _cashPubLast = null;
+    function _publishCashBalance(v) {
+      if (!dataRef || !window._finSynced || !isFinite(v)) return;
+      v = Math.round(v * 100) / 100;
+      if (v === _cashPubLast) return;
+      clearTimeout(_cashPubTimer);
+      _cashPubTimer = setTimeout(function () {
+        _cashPubLast = v;
+        dataRef.set({ cashBalance: v, cashBalanceAt: new Date().toISOString() }, { merge: true }).catch(function () {});
+      }, 2500);
+    }
     function updateSummary() {
 
       // 1. الحسابات الكلية لرصيد الخزنة
@@ -2174,6 +2197,7 @@
       } else {
         cashTotal = globalRevenue + globalCustody - globalExpense;
       }
+      _publishCashBalance(cashTotal);
 
       // --- تقرير التدقيق (يظهر في Console F12) ---
       console.group("=== تقرير تدقيق الخزينة ===");
@@ -3120,12 +3144,14 @@
       const name = prompt('اسم الفرع الجديد:');
       if (name && name.trim() && !branches.includes(name.trim())) {
         branches.push(name.trim()); saveAll(); renderBranchOptions();
+        if (window.AllShared) AllShared.branches.add(name.trim());
         elements.fBranch.value = name.trim(); if(typeof syncCombo==='function') syncCombo(elements.fBranch); showToast('تم الإضافة');
       }
     };
     window.editBranch = function(current) {
       current = current || elements.fBranch.value;
       if (!current) return;
+      if (window.AllShared && !AllCore.isAdmin(window.__allProfile)) { showToast('تعديل الفروع وحذفها من صفحة \"الفروع الموحّدة\" في النظام الشامل (مدير النظام)', 'warning'); return; }
       const name = prompt('تعديل اسم الفرع:', current);
       if (name && name.trim() && name !== current) {
         const idx = branches.indexOf(current);
@@ -3134,11 +3160,15 @@
         entries.forEach(e => { if(e.branch === current) { e.branch = name.trim(); changed.push(e); } });
         saveAll(); renderBranchOptions(); elements.fBranch.value = name.trim(); if(typeof syncCombo==='function') syncCombo(elements.fBranch); showToast('تم التعديل');
         fsSetEntries(changed);
+        // النظام الشامل: إعادة التسمية تسري على كل الأنظمة
+        if (window.AllShared) AllShared.branches.rename(current, name.trim()).catch(e => showToast(e.message, 'error'));
       }
     };
     window.deleteBranch = function(current) {
       current = current || elements.fBranch.value;
-      if (!current || !confirm(`حذف فرع ${current}؟`)) return;
+      if (window.AllShared && !AllCore.isAdmin(window.__allProfile)) { showToast('تعديل الفروع وحذفها من صفحة \"الفروع الموحّدة\" في النظام الشامل (مدير النظام)', 'warning'); return; }
+      if (!current || !confirm(`حذف فرع ${current}؟ (سيُحذف من قوائم كل الأنظمة)`)) return;
+      if (window.AllShared) AllShared.branches.remove(current).catch(e => showToast(e.message, 'error'));
       branches = branches.filter(b => b !== current);
       saveAll(); renderBranchOptions(); showToast('تم الحذف');
     };

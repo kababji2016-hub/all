@@ -46,6 +46,14 @@ service cloud.firestore {
       allow delete: if isAdmin() && uid != request.auth.uid;
     }
 
+    // الفروع الموحّدة لكل الأنظمة: القراءة والإضافة لأي حساب فعّال، التعديل والحذف للمدير
+    match /core_branches/{id} {
+      allow read: if isActive();
+      allow create: if isActive() && request.resource.data.name is string
+                    && request.resource.data.active == true;
+      allow update, delete: if isAdmin();
+    }
+
     match /core_settings/{doc} {
       allow read: if signedIn();
       allow write: if isAdmin()

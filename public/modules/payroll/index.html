@@ -24,6 +24,7 @@
 <script src="/core/firebase-config.js"></script>
 <script src="/core/modules.js"></script>
 <script src="/core/core.js"></script>
+<script src="/core/shared.js"></script>
 <style>
 /* ========== Theme Variables ========== */
 :root {
@@ -577,7 +578,7 @@ input[type="month"].month-styled:focus {
     <div style="display:flex;gap:.5rem">
       <button onclick="loadAll()" title="تحديث"><i class="fas fa-sync-alt"></i></button>
       <button onclick="toggleDark()" id="darkBtn" title="الوضع الليلي"><i class="fas fa-moon"></i></button>
-      <button onclick="doLogout()" title="تسجيل الخروج" style="background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)"><i class="fas fa-sign-out-alt"></i></button>
+      <button class="all-shell-hide" onclick="doLogout()" title="تسجيل الخروج" style="background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)"><i class="fas fa-sign-out-alt"></i></button>
     </div>
   </div>
   <!-- Live update badge -->
@@ -1777,6 +1778,12 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('loginScreen').style.display = 'none';
   AllCore.guard('payroll').then(function(profile) {
   window.__allProfile = profile;
+  // النظام الشامل: الفروع الموحّدة تظهر فوراً، واسم المؤسسة الموحّد
+  if (window.AllShared) AllShared.branches.watch(function() { try { buildDeptFilters(); } catch (e) {} });
+  AllCore.db.collection('core_settings').doc('main').get().then(function(d) {
+    window.__allOrgName = (d.exists && d.data().orgName) || '';
+    if (!(DB.settings || {}).company && window.__allOrgName) document.getElementById('companyName').textContent = window.__allOrgName;
+  }).catch(function() {});
 
   loadDisplay();
   var now = new Date();
@@ -1944,15 +1951,73 @@ function loadAll() {
 
 function applySettings() {
   var s = DB.settings || {};
-  document.getElementById('companyName').textContent = s.company || 'نظام الرواتب';
+  document.getElementById('companyName').textContent = s.company || window.__allOrgName || 'نظام الرواتب';
   setValue('s_company',  s.company  || '');
   setValue('s_currency', s.currency || 'ريال');
   setValue('s_workDays', s.workDays || 30);
   setValue('s_apiUrl',   API);
 }
 
+// ============================================================
+//  النظام الشامل: الفروع الموحّدة + ترحيل الرواتب للخزينة
+// ============================================================
+function _applyCoreBranches() {
+  if (!window.AllShared) return;
+  if (!window._payrollBranchesEnsured && (DB.branches || []).length) {
+    window._payrollBranchesEnsured = true;
+    AllShared.branches.ensure(DB.branches.filter(function (b) { return !b._core; }).map(function (b) { return b.name; }));
+  }
+  var names = AllShared.branches.current();
+  if (!names || !names.length) return;
+  var byName = {};
+  (DB.branches || []).forEach(function (b) { byName[String(b.name || '').trim()] = b; });
+  DB.branches = names.map(function (n) { return byName[n] || { id: 'core-' + n, name: n, _core: true }; });
+}
+
+// بعد ترحيل الرواتب: تسجيلها كمصروف في الخزينة (مصروف لكل فرع بصنف "رواتب")
+function _postPayrollToFinance(month, rows) {
+  var p = window.__allProfile;
+  if (!window.AllCore || !AllCore.canUse(p, 'finance')) return;
+  var byBranch = {};
+  (rows || []).forEach(function (r) { var b = r.dept || 'بدون فرع'; byBranch[b] = (byBranch[b] || 0) + (+r.net || 0); });
+  var branches = Object.keys(byBranch).filter(function (b) { return byBranch[b] > 0; });
+  if (!branches.length) return;
+  var total = branches.reduce(function (s, b) { return s + byBranch[b]; }, 0);
+  var db = AllCore.db;
+  db.collection('finance_entries').where('payrollMonth', '==', month).limit(1).get().then(function (s) {
+    var again = !s.empty;
+    var msg = (again ? '⚠ سبق تسجيل رواتب شهر ' + month + ' في الخزينة.\nهل تريد تسجيلها مرة أخرى؟\n\n' : 'تسجيل رواتب شهر ' + month + ' كمصروف في الخزينة؟\n\n') +
+      branches.map(function (b) { return b + ': ' + fmt(byBranch[b]); }).join('\n') +
+      '\n\nالإجمالي: ' + fmt(total) + '\n\nسيُسجَّل بتاريخ اليوم — مصروف لكل فرع بصنف "رواتب".';
+    if (!confirm(msg)) return;
+    var day = new Date().toLocaleDateString('en-CA'), now = new Date().toISOString(), base = Date.now();
+    var who = (p && (p.name || p.username)) || 'نظام الرواتب';
+    var batch = db.batch();
+    branches.forEach(function (b, i) {
+      var id = base + i;
+      batch.set(db.collection('finance_entries').doc(String(id)), {
+        id: id, date: day, branch: b, amount: Math.round(byBranch[b] * 100) / 100,
+        desc: 'رواتب شهر ' + month, note: 'مُرحّل تلقائياً من نظام الرواتب', type: 'expense',
+        revCat: '', cusCat: '', rolloverCat: '', expCat: 'رواتب', createdAt: now,
+        source: 'payroll', payrollMonth: month
+      });
+    });
+    batch.set(db.collection('finance_logs').doc(String(base)), {
+      id: base, timestamp: new Date().toLocaleString('en-GB'), user: who,
+      action: 'ترحيل رواتب', details: 'تسجيل رواتب شهر ' + month + ' من نظام الرواتب — ' + branches.length + ' فرع — الإجمالي ' + fmt(total)
+    });
+    return batch.commit().then(function () {
+      return db.collection('finance_config').doc('main').get().then(function (d) {
+        var cats = (d.exists && d.data().expCats) || [];
+        if (cats.indexOf('رواتب') === -1) return db.collection('finance_config').doc('main').set({ expCats: cats.concat(['رواتب']) }, { merge: true });
+      });
+    }).then(function () { toast('✅ تم تسجيل الرواتب كمصروف في الخزينة', 'success'); });
+  }).catch(function (e) { toast('⚠️ لم تُسجَّل الرواتب في الخزينة: ' + e.message, 'danger'); });
+}
+
 function buildDeptFilters() {
   seedBranchesFromEmployeesIfNeeded();
+  _applyCoreBranches();
   var branchNames = (DB.branches||[]).map(function(b){ return b.name; }).filter(Boolean);
   var empDepts    = DB.employees.map(function(e){ return e.dept; }).filter(Boolean);
   var depts = [...new Set(branchNames.concat(empDepts))].sort();
@@ -3583,6 +3648,14 @@ function doSaveBranch(e) {
 
   var dup = DB.branches.find(function(b){ return String(b.id)!==String(id) && String(b.name).trim()===name; });
   if (dup) { toast('يوجد فرع آخر بنفس الاسم بالفعل', 'danger'); return; }
+  // النظام الشامل: الفروع موحّدة بين الأنظمة
+  if (window.AllShared) {
+    var _old = id ? DB.branches.find(function(b){ return String(b.id)===String(id); }) : null;
+    if (_old && _old.name !== name) {
+      if (!AllCore.isAdmin(window.__allProfile)) { toast('تعديل الفروع وحذفها من صفحة \"الفروع الموحّدة\" في النظام الشامل (مدير النظام)', 'warning'); return; }
+      AllShared.branches.rename(_old.name, name).catch(function(e){ toast(e.message, 'danger'); });
+    } else if (!id) AllShared.branches.add(name);
+  }
 
   if (id) {
     var branch = DB.branches.find(function(b){ return String(b.id)===String(id); });
@@ -3620,7 +3693,9 @@ function delBranch(branchId) {
   var msg = empCount > 0
     ? 'يوجد '+empCount+' موظف مرتبط بفرع "'+branch.name+'". سيبقى اسم الفرع مسجلاً لديهم لكنه سيُحذف من قائمة إدارة الفروع. هل تريد المتابعة؟'
     : 'هل أنت متأكد من حذف فرع "'+branch.name+'"؟';
+  if (window.AllShared && !AllCore.isAdmin(window.__allProfile)) { toast('تعديل الفروع وحذفها من صفحة \"الفروع الموحّدة\" في النظام الشامل (مدير النظام)', 'warning'); return; }
   if (!confirm(msg)) return;
+  if (window.AllShared) AllShared.branches.remove(branch.name).catch(function(e){ toast(e.message, 'danger'); });
   DB.branches = DB.branches.filter(function(b){ return String(b.id)!==String(branchId); });
   buildDeptFilters(); renderAll();
   fbDelete('branches', branchId).then(function(){
@@ -4144,6 +4219,8 @@ function markPayrollDelivered() {
 }
 
 function _doRolloverFinalize(month, rolloverDate, total, currency, frozenCache) {
+  // النظام الشامل: عرض تسجيل الرواتب كمصروف في الخزينة
+  setTimeout(function () { _postPayrollToFinance(month, frozenCache); }, 600);
   // حفظ تاريخ الترحيل
   if (!DB.settings) DB.settings = {};
   DB.settings.lastRolloverDate = rolloverDate;

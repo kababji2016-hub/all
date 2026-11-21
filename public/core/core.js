@@ -24,6 +24,13 @@
   }
 
   var inShell = (function () { try { return window.top !== window.self; } catch (e) { return true; } })();
+  // داخل الواجهة الموحّدة: إخفاء الأزرار المكررة في الأنظمة (مثل الخروج) — أي عنصر يحمل all-shell-hide
+  if (inShell) {
+    document.documentElement.classList.add('all-in-shell');
+    var _st = document.createElement('style');
+    _st.textContent = '.all-in-shell .all-shell-hide{display:none!important}';
+    document.head.appendChild(_st);
+  }
 
   // ── أسماء المستخدمين → بريد داخلي لـ Firebase Auth ──────────
   // (Firebase يتطلب بريداً؛ نحوّل اسم المستخدم — حتى لو كان عربياً — إلى بريد داخلي ثابت)

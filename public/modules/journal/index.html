@@ -14,6 +14,7 @@
 <script src="/core/firebase-config.js"></script>
 <script src="/core/modules.js"></script>
 <script src="/core/core.js"></script>
+<script src="/core/shared.js"></script>
 
 <style>
 :root{
@@ -197,7 +198,7 @@ table.log-tbl tr:hover td{background:rgba(255,255,255,.02)}
     <button class="nav-link active" data-sec="entry" onclick="showSection('entry')"><i class="ti ti-file-plus"></i> قيد يومية جديد</button>
     <button class="nav-link" data-sec="log" onclick="showSection('log')"><i class="ti ti-history"></i> سجل اليوميات</button>
     <button class="nav-link" data-sec="settings" onclick="showSection('settings')"><i class="ti ti-settings"></i> الإعدادات</button>
-    <div class="ui-sb-foot"><button class="ui-sb-btn" onclick="doLogout()"><i class="ti ti-logout"></i> تسجيل الخروج</button></div>
+    <div class="ui-sb-foot all-shell-hide"><button class="ui-sb-btn" onclick="doLogout()"><i class="ti ti-logout"></i> تسجيل الخروج</button></div>
   </div>
 
   <div class="main">
@@ -387,6 +388,7 @@ function loadSettings(cb){
     if (doc.exists) {
       var d = doc.data();
       if (d.branches && d.branches.length) SETTINGS.branches = d.branches;
+      if (window.AllShared && d.branches) AllShared.branches.ensure(d.branches);
       if (d.user) SETTINGS.user = d.user;
       if (d.pass) SETTINGS.pass = d.pass;
     }
@@ -404,6 +406,8 @@ function saveCredentials(){
 }
 
 function buildBranchSelects(){
+  // النظام الشامل: القائمة المعتمدة هي الفروع الموحّدة
+  if (window.AllShared) { var _cb = AllShared.branches.current(); if (_cb && _cb.length) SETTINGS.branches = _cb; }
   ['e_branch','log_branch'].forEach(function(id){
     var sel = document.getElementById(id);
     var cur = sel.value;
@@ -427,13 +431,16 @@ function addBranch(){
   if (!v) return;
   if (SETTINGS.branches.indexOf(v)!==-1) { toast('الفرع موجود بالفعل','warning'); return; }
   SETTINGS.branches.push(v);
+  if (window.AllShared) AllShared.branches.add(v);
   document.getElementById('newBranchName').value='';
   saveSettingsToDB();
   buildBranchSelects();
   toast('تمت الإضافة ✓','success');
 }
 function removeBranch(i){
-  if (!confirm('حذف فرع "'+SETTINGS.branches[i]+'" من القائمة؟')) return;
+  if (window.AllShared && !AllCore.isAdmin(window.__allProfile)) { toast('تعديل الفروع وحذفها من صفحة \"الفروع الموحّدة\" في النظام الشامل (مدير النظام)', 'warning'); return; }
+  if (!confirm('حذف فرع "'+SETTINGS.branches[i]+'" من القائمة؟ (سيُحذف من قوائم كل الأنظمة)')) return;
+  if (window.AllShared) AllShared.branches.remove(SETTINGS.branches[i]);
   SETTINGS.branches.splice(i,1);
   saveSettingsToDB();
   buildBranchSelects();
@@ -703,7 +710,9 @@ function deleteLogEntry(branch, date){
 // ============================================================
 document.addEventListener('DOMContentLoaded', function(){
   // النظام الشامل: التحقق من تسجيل الدخول الموحّد والصلاحية
-  AllCore.guard('journal').then(function(){ loadSettings(function(){
+  AllCore.guard('journal').then(function(profile){ window.__allProfile = profile;
+  if (window.AllShared) AllShared.branches.watch(function(){ try { buildBranchSelects(); } catch(e) {} });
+  loadSettings(function(){
     buildBranchSelects();
     document.getElementById('s_user').value = SETTINGS.user;
     document.getElementById('s_pass').value = SETTINGS.pass;
