@@ -1,17 +1,12 @@
 // ============================================================
-//  إعدادات مشروع Firebase الجديد — الخاص بالنظام الشامل فقط
-//  ------------------------------------------------------------
-//  1) أنشئ مشروعاً جديداً من https://console.firebase.google.com
-//  2) أضف تطبيق ويب (Web App) وانسخ القيم هنا بدل PUT_...
-//  3) فعّل Authentication ← Sign-in method ← Email/Password
-//  4) فعّل Firestore Database
+//  إعدادات مشروع Firebase الخاص بالنظام الشامل فقط (kababji-all)
 //  (هذه القيم ليست سرية — الحماية الفعلية في firestore.rules)
 // ============================================================
 window.ALL_FIREBASE_CONFIG = {
-  apiKey:            "PUT_API_KEY",
-  authDomain:        "PUT_PROJECT_ID.firebaseapp.com",
-  projectId:         "PUT_PROJECT_ID",
-  storageBucket:     "PUT_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "PUT_SENDER_ID",
-  appId:             "PUT_APP_ID"
+  apiKey:            "AIzaSyDdweTxyIB9NJo7HQAJ5Xj6ZeTA6xWVFtI",
+  authDomain:        "kababji-all.firebaseapp.com",
+  projectId:         "kababji-all",
+  storageBucket:     "kababji-all.firebasestorage.app",
+  messagingSenderId: "423303004034",
+  appId:             "1:423303004034:web:70c7e712ec2d295590d99b"
 };
