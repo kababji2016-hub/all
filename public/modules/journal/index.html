@@ -135,6 +135,44 @@ table.log-tbl tr:hover td{background:rgba(255,255,255,.02)}
 }
 .mob-toggle{display:none;position:fixed;top:14px;left:14px;z-index:501;background:var(--accent);color:#fff;border:none;border-radius:8px;width:40px;height:40px;align-items:center;justify-content:center;font-size:18px}
 </style>
+<!-- التصميم الموحّد (مأخوذ من نظام الرواتب) -->
+<link rel="stylesheet" href="/core/ui.css">
+<script src="/core/ui.js"></script>
+<style id="ui-journal">
+  :root{
+    --bg:#f0f2f5; --surface:#fff; --surface2:#f8f9fa; --border:#e3e7ec;
+    --text:#212529; --text2:#555; --text3:#888;
+    --accent:#1e88e5; --accent2:#1565c0; --green:#2e7d32; --red:#c62828;
+    --shadow:0 2px 8px rgba(0,0,0,.06);
+  }
+  body{font-family:var(--ui-font);font-size:14px;font-weight:600}
+  input,select,textarea,button{font-family:var(--ui-font)}
+  /* الشريط الجانبي */
+  .sidebar{width:235px;background:var(--ui-primary);border-left:0;padding:0;display:flex;flex-direction:column}
+  .sidebar .nav-link{color:var(--ui-sb-text);padding:.62rem 1.4rem;border-radius:0;margin:0;font-size:.86rem;gap:.7rem}
+  .sidebar .nav-link i{width:18px;text-align:center;font-size:1.05rem}
+  .sidebar .nav-link:hover,.sidebar .nav-link.active{background:var(--ui-sb-active);color:#fff}
+  .sidebar .ui-sb-brand{margin-bottom:.4rem}
+  /* المحتوى */
+  .main{padding:1.4rem}
+  .page-header{background:var(--surface);border-radius:12px;padding:.85rem 1.4rem;box-shadow:var(--shadow);margin-bottom:1.2rem}
+  .page-header h2{color:var(--ui-accent);font-size:1.05rem;font-weight:700}
+  .btn-green{background:var(--ui-accent)}
+  .btn-outline{background:var(--surface2);color:var(--text)}
+  .card,.paper-sheet{border:0;box-shadow:var(--shadow)}
+  .card{padding:0 1.3rem 1.3rem;overflow:hidden}
+  .card > h3:first-child{margin:0 -1.3rem 1.1rem;background:var(--ui-primary);color:#fff;padding:.75rem 1.3rem;font-size:.87rem;font-weight:700}
+  .card:not(:has(> h3:first-child)){padding-top:1.2rem}
+  .sheet-section-title{color:var(--ui-primary);font-size:.88rem}
+  .ptable th{background:#f8f9fa;color:var(--text);font-weight:700}
+  .hlbl{background:#f8f9fa;color:var(--text)}
+  .ptable td input:focus,.ptable td select:focus{background:#eef6ff}
+  table.log-tbl th{background:#f8f9fa;color:var(--text)}
+  table.log-tbl tr:hover td{background:#f8f9fa}
+  .row-item{background:var(--surface2)}
+  .toast{box-shadow:0 6px 20px rgba(15,34,64,.12)}
+  .mob-toggle{background:var(--ui-primary)!important;color:#fff!important}
+</style>
 </head>
 <body>
 
@@ -155,14 +193,11 @@ table.log-tbl tr:hover td{background:rgba(255,255,255,.02)}
 
 <div class="app" id="appRoot" style="display:none">
   <div class="sidebar">
-    <div class="brand">
-      <div class="ic">🍖</div>
-      <div><h1>يوميات الفروع</h1><p>كبابجي</p></div>
-    </div>
+    <div class="ui-sb-brand"><i class="ti ti-notebook"></i><div><h5>يوميات الفروع</h5><p>اليومية الورقية للفروع</p></div></div>
     <button class="nav-link active" data-sec="entry" onclick="showSection('entry')"><i class="ti ti-file-plus"></i> قيد يومية جديد</button>
     <button class="nav-link" data-sec="log" onclick="showSection('log')"><i class="ti ti-history"></i> سجل اليوميات</button>
     <button class="nav-link" data-sec="settings" onclick="showSection('settings')"><i class="ti ti-settings"></i> الإعدادات</button>
-    <button class="nav-link" style="margin-top:20px;color:var(--red)" onclick="doLogout()"><i class="ti ti-logout"></i> خروج</button>
+    <div class="ui-sb-foot"><button class="ui-sb-btn" onclick="doLogout()"><i class="ti ti-logout"></i> تسجيل الخروج</button></div>
   </div>
 
   <div class="main">
@@ -570,7 +605,7 @@ function saveEntry(){
 
   var id = entryDocId(branch, date);
   fbDB.collection('journal_entries').doc(id).set(doc, {merge:true}).then(function(){
-    toast('✅ تم حفظ يومية '+branch+' بتاريخ '+date, 'success');
+    toast('تم حفظ يومية '+branch+' بتاريخ '+date, 'success');
   }).catch(function(err){
     toast('خطأ في الحفظ: '+err.message, 'danger');
   });

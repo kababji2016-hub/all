@@ -1,0 +1,84 @@
+/* ============================================================
+   التصميم الموحّد لكل الأنظمة — مأخوذ من نظام الرواتب
+   ------------------------------------------------------------
+   شريط جانبي كحلي، محتوى فاتح، بطاقات بيضاء بأيقونات ملونة هادئة،
+   رؤوس جداول وبطاقات كحلية، أيقونات فقط بدون إيموجي.
+   أي نظام جديد: أضف <link rel="stylesheet" href="/core/ui.css">
+   و <script src="/core/ui.js"></script> واستخدم الأصناف ui-*
+   ============================================================ */
+:root{
+  --ui-primary:#0f2942; --ui-accent:#1e88e5;
+  --ui-bg:#f0f2f5; --ui-surface:#fff; --ui-surface2:#f8f9fa;
+  --ui-text:#212529; --ui-text2:#555; --ui-text3:#888;
+  --ui-border:#e9ecef; --ui-shadow:0 2px 8px rgba(0,0,0,.06);
+  --ui-sb-text:rgba(255,255,255,.75); --ui-sb-active:rgba(255,255,255,.14);
+  --ui-radius:12px;
+  --ui-font:'Segoe UI',Tahoma,Arial,sans-serif;
+  --ui-green:#2e7d32; --ui-red:#c62828; --ui-orange:#e65100; --ui-purple:#6a1b9a;
+}
+
+/* ── الشريط الجانبي ─────────────────────────────────────── */
+.ui-sb-brand{padding:1.1rem 1.4rem;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:.6rem;color:#fff}
+.ui-sb-brand i{font-size:1.05rem}
+.ui-sb-brand h5{margin:0;font-size:.95rem;font-weight:700;color:#fff}
+.ui-sb-brand p{margin:0;font-size:.73rem;color:rgba(255,255,255,.5)}
+.ui-sb-label{font-size:.68rem;color:rgba(255,255,255,.38);padding:.9rem 1.4rem .3rem;font-weight:700}
+.ui-sb-foot{margin-top:auto;padding:.85rem 1rem;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:.45rem}
+.ui-sb-row{display:flex;gap:.45rem}
+.ui-sb-btn{flex:1;font-size:.76rem;padding:.42rem .5rem;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:.35rem;font-family:inherit;font-weight:600;transition:background .15s}
+.ui-sb-btn:hover{background:rgba(255,255,255,.18)}
+.ui-sb-btn.blue{background:rgba(30,136,229,.25);border-color:rgba(30,136,229,.45)}
+.ui-sb-btn.green{background:rgba(34,197,94,.2);border-color:rgba(34,197,94,.4)}
+.ui-sb-status{font-size:.7rem;color:rgba(255,255,255,.55);text-align:center}
+
+/* ── رأس الصفحة ─────────────────────────────────────────── */
+.ui-ph{background:var(--ui-surface);border-radius:var(--ui-radius);padding:.85rem 1.4rem;margin-bottom:1.2rem;box-shadow:var(--ui-shadow);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem}
+.ui-ph-title{display:flex;align-items:center;gap:.6rem;min-width:0}
+.ui-ph-title i{color:var(--ui-accent);font-size:1.05rem}
+.ui-ph-title h4{margin:0;font-size:1.05rem;color:var(--ui-accent);font-weight:700}
+.ui-ph-sub{font-size:.74rem;color:var(--ui-text3)}
+.ui-ph-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.ui-ph-date{font-size:.78rem;color:var(--ui-text2)}
+
+/* ── قائمة مطوية (Dropdown) ─────────────────────────────── */
+.ui-dd{position:relative;display:inline-block}
+.ui-dd-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.48rem .95rem;border-radius:8px;border:1px solid var(--ui-border);background:var(--ui-surface2);
+  color:var(--ui-text);font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;transition:background .15s}
+.ui-dd-btn:hover{background:#eef1f5}
+.ui-dd-btn .fa-chevron-down,.ui-dd-btn .ti-chevron-down{font-size:.7em;opacity:.6;transition:transform .15s}
+.ui-dd.open .ui-dd-btn .fa-chevron-down,.ui-dd.open .ui-dd-btn .ti-chevron-down{transform:rotate(180deg)}
+.ui-dd-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:var(--ui-surface);border:1px solid var(--ui-border);border-radius:10px;
+  box-shadow:0 10px 30px rgba(15,34,64,.15);padding:.35rem;z-index:500;display:none}
+.ui-dd.right .ui-dd-menu{left:auto;right:0}
+.ui-dd.open .ui-dd-menu{display:block}
+.ui-dd-menu button,.ui-dd-menu a{display:flex!important;align-items:center;gap:.6rem;width:100%;padding:.55rem .75rem;border:0;border-radius:7px;background:transparent!important;
+  color:var(--ui-text)!important;font-family:inherit;font-size:.84rem;font-weight:600;cursor:pointer;text-align:right;text-decoration:none;box-shadow:none!important}
+.ui-dd-menu button:hover,.ui-dd-menu a:hover{background:var(--ui-surface2)!important}
+.ui-dd-menu button i,.ui-dd-menu a i{width:18px;text-align:center;color:var(--ui-accent);font-size:1rem}
+.ui-dd-menu .hidden{display:none!important}
+.ui-dd-sep{height:1px;background:var(--ui-border);margin:.3rem .2rem}
+
+/* ── بطاقات الإحصاء ─────────────────────────────────────── */
+.ui-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;margin-bottom:1.2rem}
+.ui-stat{background:var(--ui-surface);border-radius:var(--ui-radius);padding:1.1rem;box-shadow:var(--ui-shadow);display:flex;align-items:center;gap:.9rem}
+.ui-stat-icon{width:46px;height:46px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0}
+.ui-stat-val{font-size:1.35rem;font-weight:700;line-height:1.2;color:var(--ui-text)}
+.ui-stat-lbl{font-size:.76rem;color:var(--ui-text3)}
+.ui-i-blue{background:#e3f2fd;color:#1565c0}.ui-i-green{background:#e8f5e9;color:#2e7d32}
+.ui-i-orange{background:#fff3e0;color:#e65100}.ui-i-red{background:#fce4ec;color:#c62828}
+.ui-i-purple{background:#f3e5f5;color:#6a1b9a}.ui-i-gray{background:#eceff1;color:#455a64}
+.ui-i-yellow{background:#fff8e1;color:#b7791f}
+
+/* ── بطاقة بمحتوى ───────────────────────────────────────── */
+.ui-card{background:var(--ui-surface);border-radius:var(--ui-radius);box-shadow:var(--ui-shadow);overflow:hidden;margin-bottom:1.2rem}
+.ui-card-h{background:var(--ui-primary);color:#fff;padding:.75rem 1.2rem;display:flex;justify-content:space-between;align-items:center;font-size:.87rem;font-weight:700;flex-wrap:wrap;gap:.5rem}
+.ui-card-h i{margin-left:.35rem}
+.ui-card-b{padding:1.1rem 1.2rem}
+
+/* ── شارات الحالة ───────────────────────────────────────── */
+.ui-badge{display:inline-flex;align-items:center;gap:.3rem;padding:.25em .6em;border-radius:.4rem;font-size:.75rem;font-weight:700;white-space:nowrap}
+.ui-b-red{background:#f8d7da;color:#721c24}.ui-b-orange{background:#ffe8cc;color:#9a4a00}
+.ui-b-yellow{background:#fff3cd;color:#856404}.ui-b-green{background:#d4edda;color:#155724}
+.ui-b-gray{background:#e9ecef;color:#495057}.ui-b-blue{background:#dbeafe;color:#1e40af}

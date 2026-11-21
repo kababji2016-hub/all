@@ -311,13 +311,7 @@
       .main-content { padding: 10px 10px 72px !important; }
       .mobile-bottom-nav { display: block; }
 
-      /* هيدر — أخفِ النصوص في أزرار الإجراءات */
-      header .btn-cloud-download span, header .btn-cloud-upload span,
-      header button[onclick*="pushEntries"] span, header button[onclick*="pullEntries"] span,
-      header #rolloverBtn span, header #importBtn span,
-      header #exportBtn span, header #excelBtn span { display: none !important; }
-      header button { padding: 7px 9px !important; font-size: .78rem !important; }
-      header > div > div:first-child .title { font-size: 1rem !important; }
+      /* هيدر: صار قائمة "الإجراءات" المطوية — لا حاجة لقواعد خاصة */
 
       /* إحصاء: عمودان */
       #finance-stats { grid-template-columns: repeat(2, 1fr) !important; }
@@ -361,6 +355,61 @@
     .chat-send-btn { background: linear-gradient(135deg, #7c3aed, #5b21b6); color: white; border: none; border-radius: 12px; padding: 10px 16px; cursor: pointer; font-size: 1rem; }
     .chat-send-btn:hover { opacity: 0.9; }
   </style>
+<!-- التصميم الموحّد (مأخوذ من نظام الرواتب) -->
+<link rel="stylesheet" href="/core/ui.css">
+<script src="/core/ui.js"></script>
+<style id="ui-finance">
+  :root{--bg:#f0f2f5;--accent:#1e88e5;--accent-strong:#1565c0;--text:#212529;--navy:#0f2942;--border:#e9ecef;--input:#f8f9fa;--radius:12px;--shadow:0 2px 8px rgba(0,0,0,.06)}
+  body{font-family:var(--ui-font);font-size:14px;font-weight:600}
+  button,select,input,textarea{font-family:var(--ui-font)!important}
+  /* الشريط الجانبي */
+  .sidebar{width:235px!important;background:var(--ui-primary)!important;border-left:0!important;padding-top:0!important}
+  #finance-nav{padding-top:.5rem}
+  .nav-item{color:var(--ui-sb-text)!important;font-weight:600;padding:.62rem 1.4rem!important;border-right:0!important;font-size:.86rem!important;gap:.7rem!important}
+  .nav-item i{font-size:1.05rem!important;color:inherit!important;width:18px;text-align:center}
+  .nav-item:hover,.nav-item.active{background:var(--ui-sb-active)!important;color:#fff!important}
+  .sidebar > div[style*="margin-top: auto"]{border-top:1px solid rgba(255,255,255,.1)!important}
+  #themeBtn{background:rgba(255,255,255,.08)!important;color:#fff!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:6px!important;padding:.42rem!important}
+  #fin-sync-bar{color:rgba(255,255,255,.55)!important}
+  /* المحتوى */
+  .main-content{padding:1.4rem!important}
+  header.ui-ph .title{font-size:1.05rem!important}
+  .btn{border-radius:8px!important}
+  .btn-primary{background:var(--ui-accent)!important}
+  /* البطاقات: رأس كحلي مثل الرواتب */
+  .panel{border:0!important;border-radius:12px!important;box-shadow:var(--ui-shadow)!important;padding:0 1.3rem 1.3rem!important;overflow:hidden}
+  .panel:not(:has(> h2:first-child)){padding-top:1.2rem!important}
+  .panel > h2:first-child{margin:0 -1.3rem 1.1rem!important;background:var(--ui-primary);color:#fff!important;padding:.75rem 1.3rem!important;font-size:.9rem!important;font-weight:700}
+  .panel > h2:first-child i{color:#fff!important}
+  #view-add .panel{padding:0 1.3rem 1.3rem!important;border-right:0!important}
+  #view-add .panel > div:first-child{margin:0 -1.3rem 1.1rem!important}
+  #view-add .panel > div:first-child > h2{margin:0!important;background:var(--ui-primary);color:#fff!important;padding:.75rem 1.3rem!important;font-size:.9rem!important}
+  #balanceAlertBannerInner{margin:.8rem 1.3rem 0}
+  #view-claude .panel{padding:0!important}
+  /* بطاقات الإحصاء */
+  #finance-stats{gap:.8rem!important;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important;margin-bottom:1.2rem!important}
+  .stat-card{padding:.9rem .95rem!important;gap:.7rem!important;border:0!important;border-radius:12px!important;box-shadow:var(--ui-shadow)!important}
+  .stat-card:hover{transform:none!important}
+  .stat-card > div:first-child{width:40px!important;height:40px!important;border-radius:10px!important}
+  .stat-card > div:first-child i{font-size:1.25rem!important}
+  .stat-card .label{font-size:.76rem!important;color:var(--ui-text3)!important}
+  .stat-card .value{font-size:1.1rem!important;font-weight:700!important}
+  #cashValueHeaderBadge{background:var(--ui-primary)!important}
+  #cashValueHeaderBadge + div{background:#2e7d32!important}
+  #mobileCashCard{background:var(--ui-primary)!important}
+  th{background:#f8f9fa!important;color:var(--ui-text)!important;font-size:.79rem!important;font-weight:700!important}
+  body.dark-mode th{background:var(--input)!important;color:var(--text)!important}
+  body.dark-mode .ui-ph,body.dark-mode .ui-dd-menu{background:var(--card);border-color:var(--border)}
+  body.dark-mode .ui-dd-menu button,body.dark-mode .ui-dd-btn{color:var(--text)!important;background:transparent}
+  @media (max-width:768px){
+    .ui-ph{padding:.7rem 1rem} .ui-ph-date{display:none}
+    .fin-filter-row{flex-wrap:wrap!important}
+    .fin-filter-row > div{min-width:0!important;max-width:none!important;flex:1 1 45%}
+    .fin-filter-row > div[style*="width:1px"]{display:none!important}
+    .ui-ph-title{min-width:0;flex:1}
+    .ui-ph-title h4{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  }
+</style>
 </head>
 <body>
   <!-- Loading overlay -->
@@ -392,16 +441,17 @@
 
   <div id="appPage" class="page hidden">
     <aside class="sidebar">
+      <div class="ui-sb-brand"><i class="ti ti-building-bank"></i><div><h5>نظام الخزينة</h5><p>الإيرادات والمصروفات والعهدة</p></div></div>
       <div id="finance-nav">
       <div class="nav-item active" onclick="switchView('add')" data-view="add"><i class="ti ti-square-plus"></i> إضافة عملية</div>
       <div class="nav-item" onclick="switchView('revenue')" data-view="revenue"><i class="ti ti-report-money"></i> سجل الإيرادات</div>
       <div class="nav-item" onclick="switchView('expense')" data-view="expense"><i class="ti ti-shopping-cart-x"></i> سجل المصروفات</div>
       <div class="nav-item" onclick="switchView('custody')" data-view="custody"><i class="ti ti-wallet"></i> سجل العهدة</div>
       <div class="nav-item" onclick="switchView('rollover')" data-view="rollover"><i class="ti ti-transfer"></i> سجل الترحيل</div>
-      <div class="nav-item" onclick="switchView('reports')" data-view="reports"><i class="ti ti-file-analytics" style="color: #6366f1 !important;"></i> التقارير المالية</div>
-      <div class="nav-item admin-only" onclick="switchView('compare')" data-view="compare"><i class="ti ti-chart-bar" style="color: #f59e0b !important;"></i> مقارنة الفروع</div>
+      <div class="nav-item" onclick="switchView('reports')" data-view="reports"><i class="ti ti-file-analytics"></i> التقارير المالية</div>
+      <div class="nav-item admin-only" onclick="switchView('compare')" data-view="compare"><i class="ti ti-chart-bar"></i> مقارنة الفروع</div>
       <div class="nav-item" onclick="switchView('charts')" data-view="charts"><i class="ti ti-chart-line"></i> الرسوم البيانية</div>
-      <div class="nav-item" onclick="switchView('recurring')" data-view="recurring"><i class="ti ti-repeat"></i> متكررة</div>
+      <div class="nav-item" onclick="switchView('recurring')" data-view="recurring"><i class="ti ti-repeat"></i> المعاملات المتكررة</div>
       </div>
 
       <div class="nav-item" onclick="switchView('claude')" data-view="claude"><i class="ti ti-robot"></i> مساعد كلود AI</div>
@@ -436,70 +486,38 @@
 
     <main class="main-content">
 
-      <!-- ── شريط العنوان ── -->
-      <header style="margin-bottom:10px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:14px">
-            <div style="width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--accent-strong));border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <i class="ti ti-building-bank" style="color:#fff;font-size:1.4rem"></i>
-            </div>
-            <div>
-              <div class="title" id="system-title" style="font-size:1.25rem;line-height:1.2">نظام إدارة الخزينة</div>
-              <div class="subtitle" id="current-user-info" style="font-size:.78rem;color:var(--gray)"></div>
-            </div>
+      <!-- ── شريط العنوان (التصميم الموحّد) ── -->
+      <header class="ui-ph">
+        <div class="ui-ph-title">
+          <i class="ti ti-building-bank"></i>
+          <div>
+            <h4 class="title" id="system-title">نظام إدارة الخزينة</h4>
+            <div class="ui-ph-sub" id="current-user-info"></div>
           </div>
-
-          <!-- أزرار الإجراءات -->
-          <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center">
-            <button class="btn btn-primary" onclick="AllCore.home()" style="background:var(--accent)!important;color:#fff!important;padding:7px 18px;font-size:.82rem;border-radius:11px" title="الواجهة الرئيسية">
-              <i class="ti ti-smart-home"></i><span style="margin-right:5px">الرئيسية</span>
-            </button>
-
-            <!-- مجموعة السحابة -->
-            <div style="display:flex;gap:4px;background:var(--input);padding:4px;border-radius:11px;border:1px solid var(--border)">
-              <button class="btn-cloud-download" onclick="loadFromFirestore()" title="تحميل من Firebase"
-                style="background:#16a34a;color:#fff;padding:6px 13px;border-radius:8px;font-size:.8rem;border:none;cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;display:flex;align-items:center;gap:5px">
-                <i class="ti ti-cloud-download"></i><span>تحميل</span>
-              </button>
-              <button class="btn-cloud-upload" onclick="forceSyncToFirebase()" title="رفع للسحابة"
-                style="background:#ea580c;color:#fff;padding:6px 13px;border-radius:8px;font-size:.8rem;border:none;cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;display:flex;align-items:center;gap:5px">
-                <i class="ti ti-cloud-upload"></i><span>رفع</span>
-              </button>
-              <button onclick="pushEntriesToSheets()" title="رفع لـ Sheets"
-                style="background:#0f9d58;color:#fff;padding:6px 13px;border-radius:8px;font-size:.8rem;border:none;cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;display:flex;align-items:center;gap:5px">
-                <i class="ti ti-table-up"></i><span>Sheets↑</span>
-              </button>
-              <button onclick="pullEntriesFromSheets()" title="استيراد من Sheets"
-                style="background:#1a73e8;color:#fff;padding:6px 13px;border-radius:8px;font-size:.8rem;border:none;cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;display:flex;align-items:center;gap:5px">
-                <i class="ti ti-table-down"></i><span>Sheets↓</span>
-              </button>
-            </div>
-
-            <!-- مجموعة البيانات -->
-            <div style="display:flex;gap:4px;background:var(--input);padding:4px;border-radius:11px;border:1px solid var(--border)">
-              <button id="rolloverBtn" type="button" title="ترحيل الرصيد"
-                style="background:var(--card);color:var(--text);border:none;padding:6px 13px;border-radius:8px;font-size:.8rem;cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;display:flex;align-items:center;gap:5px">
-                <i class="ti ti-transfer"></i><span>ترحيل</span>
-              </button>
-              <button id="importBtn" title="استيراد بيانات"
-                style="background:#7c3aed;color:#fff;border:none;padding:6px 13px;border-radius:8px;font-size:.8rem;cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;display:flex;align-items:center;gap:5px">
-                <i class="ti ti-upload"></i><span>استيراد</span>
-              </button>
-              <button id="exportBtn" title="نسخة احتياطية"
-                style="background:var(--card);color:var(--text);border:none;padding:6px 13px;border-radius:8px;font-size:.8rem;cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;display:flex;align-items:center;gap:5px">
-                <i class="ti ti-download"></i><span>نسخة</span>
-              </button>
-              <button id="excelBtn" title="تصدير Excel"
-                style="background:#16a34a;color:#fff;border:none;padding:6px 13px;border-radius:8px;font-size:.8rem;cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;display:flex;align-items:center;gap:5px">
-                <i class="ti ti-file-spreadsheet"></i><span>Excel</span>
-              </button>
+        </div>
+        <div class="ui-ph-actions">
+          <span class="ui-ph-date" id="phDate"></span>
+          <div class="ui-dd">
+            <button class="ui-dd-btn" type="button" data-dd><i class="ti ti-dots-vertical"></i> الإجراءات <i class="ti ti-chevron-down"></i></button>
+            <div class="ui-dd-menu">
+              <button type="button" class="btn-cloud-download" onclick="loadFromFirestore()"><i class="ti ti-cloud-download"></i>تحميل من السحابة</button>
+              <button type="button" class="btn-cloud-upload" onclick="forceSyncToFirebase()"><i class="ti ti-cloud-upload"></i>رفع للسحابة</button>
+              <div class="ui-dd-sep"></div>
+              <button id="rolloverBtn" type="button"><i class="ti ti-transfer"></i>ترحيل الرصيد</button>
+              <button id="importBtn" type="button"><i class="ti ti-upload"></i>استيراد بيانات</button>
+              <button id="exportBtn" type="button"><i class="ti ti-download"></i>نسخة احتياطية</button>
+              <button id="excelBtn" type="button"><i class="ti ti-file-spreadsheet"></i>تصدير Excel</button>
+              <div class="ui-dd-sep admin-only"></div>
+              <button type="button" class="admin-only" onclick="promptAlertThreshold()"><i class="ti ti-bell-ringing"></i>حدّ تنبيه الرصيد</button>
             </div>
           </div>
         </div>
       </header>
+      <script>function promptAlertThreshold(){var inp=document.getElementById('alertThresholdInput');var v=prompt('تنبيه عند انخفاض رصيد الخزينة عن (اكتب 0 لإلغاء التنبيه):',inp.value||'');if(v===null)return;inp.value=v;saveAlertThreshold();}</script>
+      <script>try{document.getElementById('phDate').textContent=new Date().toLocaleDateString('ar-SA-u-nu-latn',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}catch(e){}</script>
 
       <!-- ── شريط الفلاتر + البحث ── -->
-      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end">
+      <div class="fin-filter-row" style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end">
 
         <!-- تاريخ الإحصاء — على اليمين في RTL -->
         <div style="min-width:170px">
@@ -535,7 +553,7 @@
         <div style="display:flex;gap:6px">
           <div id="cashValueHeaderBadge" style="display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1f4abf,#2a7de1);border-radius:11px;padding:5px 14px;min-width:155px">
             <div style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <i class="ti ti-safe" style="color:#fff;font-size:1rem"></i>
+              <i class="ti ti-building-bank" style="color:#fff;font-size:1rem"></i>
             </div>
             <div>
               <div style="font-size:.62rem;color:rgba(255,255,255,.75);font-weight:700;white-space:nowrap">رصيد الخزينة الكلي</div>
@@ -558,7 +576,7 @@
       <!-- بطاقة رصيد الخزينة — مرئية على الجوال فقط -->
       <div id="mobileCashCard" style="background:linear-gradient(135deg,#1f4abf,#2a7de1);border-radius:14px;padding:12px 16px;margin-bottom:10px;align-items:center;gap:12px;display:none">
         <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <i class="ti ti-safe" style="color:#fff;font-size:1.2rem"></i>
+          <i class="ti ti-building-bank" style="color:#fff;font-size:1.2rem"></i>
         </div>
         <div>
           <div style="font-size:.68rem;color:rgba(255,255,255,.75);font-weight:700">رصيد الخزينة الكلي</div>
@@ -593,7 +611,7 @@
 
         <div class="stat-card" style="display:flex;align-items:center;gap:7px;padding:7px 10px">
           <div style="width:30px;height:30px;border-radius:9px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <i class="ti ti-math-equal" style="color:#0284c7;font-size:1rem"></i>
+            <i class="ti ti-equal" style="color:#0284c7;font-size:1rem"></i>
           </div>
           <div style="flex:1;text-align:right;min-width:0">
             <div class="label">الصافي المتاح</div>
@@ -727,8 +745,8 @@
       </div>
       </section>
 
-      <!-- إعداد تنبيه الرصيد -->
-      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--card);padding:10px 14px;border-radius:12px;border:1px solid var(--border);flex-wrap:wrap">
+      <!-- إعداد تنبيه الرصيد (التصميم الموحّد: صار في قائمة الإجراءات) -->
+      <div id="alertThresholdBar" style="display:none;align-items:center;gap:8px;margin-top:10px;background:var(--card);padding:10px 14px;border-radius:12px;border:1px solid var(--border);flex-wrap:wrap">
         <span style="font-size:.82rem;font-weight:700;color:var(--gray)">تنبيه عند انخفاض الرصيد عن:</span>
         <input type="number" id="alertThresholdInput" min="0" step="0.01" placeholder="0.00"
           style="width:120px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--input);color:var(--text);font-family:Cairo,sans-serif;font-size:.82rem">
@@ -839,9 +857,7 @@
           <div class="field"><label>من تاريخ</label><input id="repDateStart" type="date" /></div>
           <div class="field"><label>إلى تاريخ</label><input id="repDateEnd" type="date" /></div>
           <div class="field"><button class="btn btn-primary" onclick="generateReport()">تحديث التقرير</button></div>
-          <div class="field"><button class="btn btn-secondary no-print" onclick="window.print()" style="display:flex;align-items:center;gap:8px;"><i class="ti ti-printer"></i> طباعة التقرير</button></div>
-          <div class="field"><button class="btn btn-secondary no-print admin-only" onclick="exportReportToExcel()" style="display:flex;align-items:center;gap:8px;background:#16a34a !important;color:#fff;"><i class="ti ti-file-spreadsheet"></i> تصدير Excel</button></div>
-          <div class="field"><button class="btn btn-secondary no-print admin-only" onclick="closeCurrentMonth()" style="display:flex;align-items:center;gap:8px;background:#7c3aed !important;color:#fff;"><i class="ti ti-lock"></i> إغلاق الشهر</button></div>
+          <div class="field no-print"><div class="ui-dd"><button class="ui-dd-btn" type="button" data-dd style="height:42px"><i class="ti ti-dots-vertical"></i> خيارات التقرير <i class="ti ti-chevron-down"></i></button><div class="ui-dd-menu"><button type="button" onclick="window.print()"><i class="ti ti-printer"></i>طباعة التقرير</button><button type="button" class="admin-only" onclick="exportReportToExcel()"><i class="ti ti-file-spreadsheet"></i>تصدير Excel</button><button type="button" class="admin-only" onclick="closeCurrentMonth()"><i class="ti ti-lock"></i>إغلاق الشهر</button></div></div></div>
         </div>
         <div id="reportArea"></div>
       </div>
@@ -998,7 +1014,7 @@
           <div id="chatMessages" class="chat-messages">
             <div class="chat-msg system-note">مرحباً! أنا مساعدك المالي الذكي. أدخل مفتاح Anthropic API ثم اضغط "إرسال البيانات" لأحلل خزينتك، أو اسألني أي سؤال.</div>
           </div>
-          <div id="chatTyping" class="chat-typing hidden">⏳ كلود يفكر...</div>
+          <div id="chatTyping" class="chat-typing hidden"><i class="ti ti-loader-2"></i> كلود يفكر...</div>
           <div class="chat-input-area">
             <input id="chatInput" type="text" placeholder="اسأل كلود عن خزينتك... (Enter للإرسال)" />
             <button class="chat-send-btn" onclick="sendChatMessage()"><i class="ti ti-send"></i></button>
@@ -1703,16 +1719,16 @@
         <div class="report-print-header">
           <div class="rph-title">نظام إدارة الخزينة</div>
           <div class="rph-details">
-            <span class="rph-branch">🏢 ${branchLabel}</span>
-            <span class="rph-type">📋 ${typeLabel}</span>
-            <span class="rph-dates">📅 ${dateRange}</span>
+            <span class="rph-branch"><i class="ti ti-building-store"></i> ${branchLabel}</span>
+            <span class="rph-type"><i class="ti ti-list-details"></i> ${typeLabel}</span>
+            <span class="rph-dates"><i class="ti ti-calendar"></i> ${dateRange}</span>
           </div>
         </div>
         <div style="margin-bottom:12px; font-size:0.85rem; color:var(--gray); display:flex; gap:16px; flex-wrap:wrap;" class="no-print">
-          <span>📋 <b>${filtered.length}</b> عملية</span>
-          <span>📅 ${dateRange}</span>
-          <span>🏢 ${branchLabel}</span>
-          <span>🏷️ ${typeLabel}</span>
+          <span><i class="ti ti-list-details"></i> <b>${filtered.length}</b> عملية</span>
+          <span><i class="ti ti-calendar"></i> ${dateRange}</span>
+          <span><i class="ti ti-building-store"></i> ${branchLabel}</span>
+          <span><i class="ti ti-tag"></i> ${typeLabel}</span>
         </div>
         <div class="table-wrapper">
           <table>
@@ -1925,7 +1941,7 @@
       const actionOptions = currentUser.role === 'admin' ? `
         <option disabled>──────────</option>
         <option value="ACTION_ADD"> + (إضافة)</option>
-        <option value="ACTION_EDIT"> ✏️ (تعديل)</option>
+        <option value="ACTION_EDIT"> ~ (تعديل)</option>
         <option value="ACTION_DEL"> x (حذف)</option>` : '';
       
       const branchList = `<option value="">-- اختر الفرع --</option>` + branches.map(branch => `<option value="${branch}">${branch}</option>`).join('');
@@ -1990,7 +2006,7 @@
       const actionOptions = currentUser.role === 'admin' ? `
         <option disabled>──────────</option>
         <option value="ACTION_ADD"> + (إضافة)</option>
-        <option value="ACTION_EDIT"> ✏️ (تعديل)</option>
+        <option value="ACTION_EDIT"> ~ (تعديل)</option>
         <option value="ACTION_DEL"> x (حذف)</option>` : '';
 
       const mainOptions = `<option value="">-- اختر الصنف --</option>` + options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
@@ -2316,7 +2332,7 @@
         const locked = isMonthClosed(entry.date);
         const baseCols = `
           <td>${index + 1}</td>
-          <td>${formattedDate}${locked ? ' 🔒' : ''} <br><small style="color:var(--gray); font-size:10px;">إدخال: ${entryTime}</small></td>
+          <td>${formattedDate}${locked ? ' <i class="ti ti-lock" title="الشهر مغلق" style="color:var(--red)"></i>' : ''} <br><small style="color:var(--gray); font-size:10px;">إدخال: ${entryTime}</small></td>
           <td>${entry.branch}</td>
           <td class="${typeClasses[entry.type] || ''}">${entry.amount.toFixed(2)}</td>
           <td>${entry.desc}</td>
@@ -3675,7 +3691,7 @@ ${last5 || 'لا توجد عمليات بعد'}`;
     const ico=document.createElement('i');ico.className='ti ti-chevron-down';ico.style.cssText='font-size:11px;opacity:0.5;flex-shrink:0';
     btn.appendChild(lbl);btn.appendChild(ico);wrap.insertBefore(btn,sel);
     const dd=document.createElement('div');dd.className='combo-dd';
-    const si=document.createElement('input');si.type='text';si.placeholder='🔍 ابحث...';si.autocomplete='off';si.className='combo-search';
+    const si=document.createElement('input');si.type='text';si.placeholder='ابحث...';si.autocomplete='off';si.className='combo-search';
     const list=document.createElement('div');list.className='combo-list';
     dd.appendChild(si);dd.appendChild(list);
     comboPortal.appendChild(dd);
