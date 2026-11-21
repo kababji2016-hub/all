@@ -10,7 +10,22 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="النظام الشامل">
-<link rel="apple-touch-icon" href="/icons/portal-192.png">
+<!-- شعار مؤسسة كبابجي: أيقونة المتصفح والجوال وصورة المشاركة -->
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/brand/favicon-16.png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<meta name="description" content="النظام الشامل لمؤسسة كبابجي — الخزينة والرواتب والوثائق ويوميات الفروع">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="مؤسسة كبابجي">
+<meta property="og:title" content="مؤسسة كبابجي — النظام الشامل">
+<meta property="og:description" content="الخزينة والرواتب والوثائق ويوميات الفروع في نظام واحد">
+<meta property="og:image" content="/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ar_SA">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="/brand/og-image.png">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -181,6 +196,10 @@ tr:last-child td{border-bottom:0}
 .toast.err{background:var(--red)}
 .toast.ok{background:var(--green)}
 .backdrop{display:none}
+.brand-logo{height:26px;width:auto;flex-shrink:0;display:block}
+.brand > div{min-width:0}
+.brand b,.brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.auth-logo .brand-logo{height:58px;margin:0 auto 14px}
 /* عند فتح نظام: تختفي القائمة الرئيسية وتبقى قائمة النظام فقط (وفيها زر الرجوع) */
 @media (min-width:901px){ #app.module-mode .sidebar{display:none} }
 
@@ -237,7 +256,7 @@ tr:last-child td{border-bottom:0}
 <!-- ===== Login ===== -->
 <div id="scrLogin" class="screen hidden">
   <div class="auth-card">
-    <div class="auth-logo"><div class="mark"><i class="fas fa-layer-group"></i></div><h1 class="orgName">النظام الشامل</h1><p>تسجيل دخول واحد لكل الأنظمة</p></div>
+    <div class="auth-logo"><img class="brand-logo" src="/brand/logo.png" alt="كبابجي"><h1 class="orgName">النظام الشامل</h1><p>تسجيل دخول واحد لكل الأنظمة</p></div>
     <div class="field"><label><i class="fas fa-user fa-sm"></i> اسم المستخدم</label><input id="liUser" autocomplete="username"></div>
     <div class="field"><label><i class="fas fa-lock fa-sm"></i> كلمة المرور</label><input id="liPass" type="password" autocomplete="current-password"></div>
     <button class="btn btn-primary btn-block" id="liBtn" onclick="doLogin()"><i class="fas fa-right-to-bracket"></i> دخول</button>
@@ -249,7 +268,7 @@ tr:last-child td{border-bottom:0}
 <div id="app" class="hidden">
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <div class="mark"><i class="fas fa-layer-group"></i></div>
+      <img class="brand-logo" src="/brand/logo.png" alt="كبابجي">
       <div><b class="orgName">النظام الشامل</b><small>كل الأنظمة في مكان واحد</small></div>
     </div>
     <nav class="nav">
@@ -822,7 +841,7 @@ function maybeNotify(res){
   (res.alerts||[]).filter(function(a){ return a.level!=='info'; }).forEach(function(a){
     var key = a.module+'|'+a.title;
     if (seen[key]) return; seen[key]=1;
-    try { new Notification(a.title, { body: a.moduleTitle + ((a.items&&a.items[0]) ? ' — ' + a.items[0] : ''), icon:'/icons/portal-192.png', tag:key }); } catch(e){}
+    try { new Notification(a.title, { body: a.moduleTitle + ((a.items&&a.items[0]) ? ' — ' + a.items[0] : ''), icon:'/brand/icon-192.png', tag:key }); } catch(e){}
   });
   try { localStorage.setItem(SEEN_KEY, JSON.stringify({day:day, keys:seen})); } catch(e){}
 }
