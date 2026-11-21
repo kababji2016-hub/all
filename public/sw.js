@@ -1,5 +1,5 @@
 // Service Worker — الشبكة أولاً، والنسخة المخزّنة عند انقطاع الإنترنت
-const CACHE = 'all-v1';
+const CACHE = 'all-v2';
 const PRECACHE = ['/', '/index.html', '/core/core.js', '/core/modules.js', '/core/firebase-config.js'];
 
 self.addEventListener('install', e => {
