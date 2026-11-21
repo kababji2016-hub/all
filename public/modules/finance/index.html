@@ -1331,6 +1331,21 @@
       localStorage.setItem(STORAGE_KEYS.revCats,  JSON.stringify(revCats));
       localStorage.setItem(STORAGE_KEYS.expCats,  JSON.stringify(expCats));
       localStorage.setItem(STORAGE_KEYS.cusCats,  JSON.stringify(cusCats));
+      // النظام الشامل: الإعدادات المشتركة بين الأجهزة (المتكررة / الأشهر المغلقة / حد التنبيه)
+      if (Array.isArray(data.recurring)) {
+        localStorage.setItem('fin_recurring', JSON.stringify(data.recurring));
+        if (typeof renderRecurringTable === 'function') renderRecurringTable();
+      }
+      if (Array.isArray(data.closedMonths)) {
+        localStorage.setItem('fin_closed_months', JSON.stringify(data.closedMonths));
+        if (typeof renderEntries === 'function') renderEntries();
+      }
+      if (data.alertThreshold !== undefined) {
+        localStorage.setItem('fin_alert_threshold', data.alertThreshold);
+        const _inp = document.getElementById('alertThresholdInput');
+        if (_inp) _inp.value = (+data.alertThreshold > 0) ? data.alertThreshold : '';
+        if (typeof updateSummary === 'function') updateSummary();
+      }
       renderBranchOptions();
       updateCategorySelect();
       renderFilterCategories();
@@ -2718,6 +2733,8 @@
     function saveAlertThreshold() {
       const v = parseFloat(document.getElementById('alertThresholdInput').value) || 0;
       localStorage.setItem('fin_alert_threshold', v);
+      // النظام الشامل: يُحفظ في السحابة ليظهر على كل الأجهزة
+      if (dataRef) dataRef.set({ alertThreshold: v }, { merge: true }).catch(e => showToast('لم يُحفظ في السحابة: ' + e.message, 'error'));
       showToast('تم حفظ حد التنبيه: ' + v.toFixed(2), 'success');
       updateSummary();
     }
@@ -2815,6 +2832,8 @@
     }
     function saveRecurring(list) {
       localStorage.setItem('fin_recurring', JSON.stringify(list));
+      // النظام الشامل: يُحفظ في السحابة ليظهر على كل الأجهزة
+      if (dataRef) dataRef.set({ recurring: list }, { merge: true }).catch(e => showToast('لم يُحفظ في السحابة: ' + e.message, 'error'));
     }
 
     function renderRecurringTable() {
@@ -2920,6 +2939,8 @@
     }
     function saveClosedMonths(arr) {
       localStorage.setItem('fin_closed_months', JSON.stringify(arr));
+      // النظام الشامل: القفل يُحفظ في السحابة فيسري على كل الأجهزة
+      if (dataRef) dataRef.set({ closedMonths: arr }, { merge: true }).catch(e => showToast('لم يُحفظ إغلاق الشهر في السحابة: ' + e.message, 'error'));
     }
     function isMonthClosed(dateStr) {
       if (!dateStr) return false;
