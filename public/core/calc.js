@@ -9,6 +9,8 @@
 (function () {
   'use strict';
   var inShell = (function () { try { return window.top !== window.self; } catch (e) { return true; } })();
+  // وضع النافذة المستقلة (calc.html) — يفتحها برنامج الاختصار على مستوى الجهاز
+  var STANDALONE = !!window.ALL_CALC_STANDALONE;
 
   // ── كشف الاختصار ─────────────────────────────────────────
   var hDown = false, lastH = 0;
@@ -21,7 +23,7 @@
     if (inShell) { try { window.top.postMessage({ type: 'all:calc' }, location.origin); return; } catch (e) {} }
     Calc.toggle();
   }
-  document.addEventListener('keydown', function (e) {
+  if (!STANDALONE) document.addEventListener('keydown', function (e) {
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     if (Calc.isOpen() && document.getElementById('allCalc').contains(e.target)) return; // الآلة نفسها تتعامل مع الأزرار
     if (isTyping(e.target)) return;
@@ -60,7 +62,10 @@
     '#allCalc .ac-g .eq:hover{background:#1565c0}' +
     '#allCalc .ac-f{display:flex;justify-content:space-between;align-items:center;padding:0 12px 10px;direction:rtl}' +
     '#allCalc .ac-f button{border:0;background:none;color:#1e88e5;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}' +
-    '#allCalc .ac-f span{font-size:.68rem;color:#999}';
+    '#allCalc .ac-f span{font-size:.68rem;color:#999}' +
+    '#allCalc.ac-full{position:fixed;inset:0;left:0;bottom:0;width:auto;border-radius:0;box-shadow:none;display:flex!important;flex-direction:column}' +
+    '#allCalc.ac-full .ac-h{cursor:default}#allCalc.ac-full .ac-g{flex:1;grid-auto-rows:1fr}#allCalc.ac-full .ac-g button{height:auto}' +
+    '#allCalc.ac-full .ac-v{font-size:2.3rem}';
 
   var KEYS = [
     ['C', 'fn', 'clear'], ['⌫', 'fn', 'back'], ['%', 'fn', '%'], ['÷', 'op', '/'],
@@ -135,6 +140,7 @@
     }
     el = document.createElement('div');
     el.id = 'allCalc'; el.tabIndex = -1;
+    if (STANDALONE) el.className = 'ac-full';
     el.innerHTML =
       '<div class="ac-h"><div><b>آلة حاسبة</b><small>H + مسافة</small></div><button class="ac-x" title="إغلاق (Esc)">×</button></div>' +
       '<div class="ac-d"><div class="ac-e"></div><div class="ac-v">0</div></div>' +
@@ -142,6 +148,7 @@
       '<div class="ac-f"><button type="button" class="ac-copy">نسخ النتيجة</button><span>Enter = · Esc إغلاق</span></div>';
     document.body.appendChild(el);
     el.querySelector('.ac-x').onclick = function () { Calc.close(); };
+    if (STANDALONE) el.querySelector('.ac-h small').textContent = 'اضغط H مطولاً + مسافة من أي مكان';
     el.querySelector('.ac-g').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { press(b.dataset.k); el.focus(); } });
     el.querySelector('.ac-copy').onclick = function () {
       var v = expr ? evaluate(expr) : lastResult;
@@ -167,7 +174,7 @@
     // السحب من الشريط العلوي
     var hdr = el.querySelector('.ac-h'), drag = null;
     hdr.addEventListener('mousedown', function (e) {
-      if (e.target.closest('button')) return;
+      if (e.target.closest('button') || STANDALONE) return;
       var r = el.getBoundingClientRect(); drag = { dx: e.clientX - r.left, dy: e.clientY - r.top }; e.preventDefault();
     });
     document.addEventListener('mousemove', function (e) {
@@ -187,10 +194,15 @@
       el.style.display = 'block'; render();
       setTimeout(function () { el.focus(); }, 0);
     },
-    close: function () { if (el) el.style.display = 'none'; },
+    close: function () { if (STANDALONE) { window.close(); return; } if (el) el.style.display = 'none'; },
     toggle: function () { Calc.isOpen() ? Calc.close() : Calc.open(); },
     // يفتح الآلة من أي صفحة (داخل الواجهة تُفتح في الصفحة الرئيسية)
     show: function () { trigger(); }
   };
   window.AllCalc = Calc;
+  if (STANDALONE) {
+    var go = function () { Calc.open(); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+    window.addEventListener('focus', function () { if (el) el.focus(); });
+  }
 })();
