@@ -1,0 +1,10 @@
+{
+  "api_key": "PUT_API_KEY (نفس apiKey في public/core/firebase-config.js)",
+  "project_id": "PUT_PROJECT_ID",
+  "username": "اسم مستخدم له صلاحية نظام الوثائق والمهام",
+  "password": "كلمة مروره",
+  "warn_days": 10,
+  "interval_hours": 2,
+  "notify_start_hour": 15,
+  "notify_end_hour": 2
+}

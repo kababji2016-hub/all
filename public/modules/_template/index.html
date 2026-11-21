@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام جديد</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<!-- ① Firebase + النواة المشتركة — انسخ هذه الأسطر كما هي في أي نظام جديد -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="/core/firebase-config.js"></script>
+<script src="/core/modules.js"></script>
+<script src="/core/core.js"></script>
+<style>
+  :root{--bg:#f3f6fb;--card:#fff;--text:#0f2240;--text3:#8a97b0;--border:#e3e9f3;--accent:#2a7de1}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);padding:24px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;max-width:640px}
+  h1{font-size:1.4rem;margin-bottom:8px}
+  .row{display:flex;gap:8px;margin:14px 0}
+  input{flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font:inherit}
+  button{padding:10px 16px;border:0;border-radius:10px;background:var(--accent);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+  li{padding:8px 0;border-bottom:1px solid var(--border);list-style:none;display:flex;justify-content:space-between}
+  #app{display:none}
+</style>
+</head>
+<body>
+<div id="app" class="card">
+  <h1>نظام جديد — قالب</h1>
+  <p style="color:var(--text3)">مرحباً <b id="who"></b>. هذا مثال بسيط يحفظ عناصر في Firestore.</p>
+  <div class="row"><input id="txt" placeholder="اكتب عنصراً..."><button onclick="addItem()">إضافة</button></div>
+  <ul id="list"></ul>
+</div>
+
+<script>
+// ② غيّر هذا إلى معرّف النظام كما في core/modules.js
+var MODULE_ID = 'template';
+
+// ③ كل مجموعات هذا النظام تبدأ بـ MODULE_ID + '_'  (مثلاً template_items)
+//    — هذا شرط لكي تحميها قواعد firestore.rules تلقائياً
+var db = AllCore.db;
+var itemsCol = function(){ return db.collection(MODULE_ID + '_items'); };
+
+// ④ لا يبدأ النظام إلا بعد التحقق من تسجيل الدخول والصلاحية
+AllCore.guard(MODULE_ID).then(function(profile){
+  document.getElementById('who').textContent = profile.name || profile.username;
+  document.getElementById('app').style.display = 'block';
+  // الدور الداخلي (إن عرّفت roles في modules.js):
+  // var role = AllCore.moduleRole(profile, MODULE_ID);
+  itemsCol().orderBy('at', 'desc').onSnapshot(function(snap){
+    document.getElementById('list').innerHTML = snap.docs.map(function(d){
+      var x = d.data();
+      return '<li><span>' + String(x.text).replace(/[<>&]/g, '') + '</span><small>' + (x.by || '') + '</small></li>';
+    }).join('');
+  });
+  window.addItem = function(){
+    var t = document.getElementById('txt').value.trim(); if (!t) return;
+    itemsCol().add({ text: t, by: profile.name || profile.username, at: new Date().toISOString() });
+    document.getElementById('txt').value = '';
+  };
+});
+</script>
+</body>
+</html>

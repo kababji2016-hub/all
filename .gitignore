@@ -1,0 +1,9 @@
+.firebase/
+node_modules/
+*.log
+.claude/settings.local.json
+
+# notifier — local secrets & runtime files
+tools/notifier/config.json
+tools/notifier/notifier.pid
+tools/notifier/notifier_log.txt

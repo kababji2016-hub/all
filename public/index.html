@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>النظام الشامل</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0f1f38">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="النظام الشامل">
+<link rel="apple-touch-icon" href="/icons/portal-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="/core/firebase-config.js"></script>
+<script src="/core/modules.js"></script>
+<script src="/core/core.js"></script>
+<style>
+:root{
+  --navy:#0f1f38; --navy2:#16294a; --navy3:#1e3560;
+  --bg:#f3f6fb; --card:#fff; --text:#0f2240; --text2:#4a5a78; --text3:#8a97b0;
+  --border:#e3e9f3; --accent:#2a7de1; --accent2:#1f5fbf;
+  --green:#22a861; --red:#e03131; --orange:#e8590c;
+  --radius:16px; --shadow:0 10px 30px rgba(15,34,64,.08);
+  --sidebar:264px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Cairo',Tahoma,sans-serif;background:var(--bg);color:var(--text);direction:rtl}
+button,input,select{font-family:inherit}
+.hidden{display:none!important}
+
+/* ===== Full-screen pages (loading / login / setup) ===== */
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:radial-gradient(circle at 20% 10%,#1e3a6a 0,transparent 45%),radial-gradient(circle at 80% 90%,#163a5c 0,transparent 40%),var(--navy);z-index:50}
+.spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.auth-card{width:100%;max-width:420px;background:#fff;border-radius:22px;padding:34px 30px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo .mark{width:68px;height:68px;border-radius:20px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--accent),#5b3fd6);color:#fff;font-size:30px;box-shadow:0 12px 28px rgba(42,125,225,.35)}
+.auth-logo h1{font-size:1.5rem;font-weight:900}
+.auth-logo p{color:var(--text3);font-size:.88rem;margin-top:2px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.84rem;font-weight:700;color:var(--text2);margin-bottom:6px}
+.field input,.field select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:.95rem;outline:none;background:#fff;color:var(--text);transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.field .hint{font-size:.75rem;color:var(--text3);margin-top:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border:0;border-radius:12px;font-weight:700;font-size:.92rem;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-light{background:#eef2f8;color:var(--text)}.btn-light:hover{background:#e2e8f2}
+.btn-danger{background:#fdecec;color:var(--red)}.btn-danger:hover{background:var(--red);color:#fff}
+.btn-success{background:#e7f7ee;color:var(--green)}.btn-success:hover{background:var(--green);color:#fff}
+.btn-block{width:100%;padding:12px}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.msg{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:.85rem;text-align:center}
+.msg.err{background:#fdecec;color:#c92a2a}
+.msg.ok{background:#e7f7ee;color:#2b8a3e}
+.setup-note{background:#fff8e6;border:1px solid #ffe2a8;color:#8a5a00;border-radius:12px;padding:10px 12px;font-size:.82rem;margin-bottom:16px;line-height:1.7}
+
+/* ===== App layout ===== */
+#app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar);flex-shrink:0;background:var(--navy);color:#fff;display:flex;flex-direction:column;transition:transform .25s}
+.brand{display:flex;align-items:center;gap:12px;padding:20px 18px 16px}
+.brand .mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#5b3fd6);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.brand b{display:block;font-size:1.02rem;font-weight:900;line-height:1.3}
+.brand small{color:rgba(255,255,255,.5);font-size:.74rem}
+.nav{flex:1;overflow-y:auto;padding:6px 12px}
+.nav-label{font-size:.7rem;color:rgba(255,255,255,.4);font-weight:700;padding:14px 10px 6px;letter-spacing:.5px}
+.nav-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;margin-bottom:3px;border:0;border-radius:11px;background:transparent;color:rgba(255,255,255,.78);font-size:.92rem;font-weight:600;cursor:pointer;text-align:right;transition:all .15s}
+.nav-item:hover{background:var(--navy2);color:#fff}
+.nav-item.active{background:var(--navy3);color:#fff}
+.nav-item .ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:rgba(255,255,255,.07)}
+.nav-item.active .ico{background:var(--c,var(--accent));color:#fff}
+.nav-item .dot{margin-right:auto;width:7px;height:7px;border-radius:50%;background:var(--green);opacity:0}
+.nav-item.loaded .dot{opacity:.9}
+.side-foot{padding:12px;border-top:1px solid rgba(255,255,255,.08)}
+.me{display:flex;align-items:center;gap:10px;padding:8px 6px}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+.me b{display:block;font-size:.88rem}
+.me small{color:rgba(255,255,255,.5);font-size:.74rem}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 16px;background:#fff;border-bottom:1px solid var(--border)}
+.topbar h2{font-size:1.02rem;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{width:38px;height:38px;border:0;border-radius:10px;background:#eef2f8;color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:15px}
+.icon-btn:hover{background:#e2e8f2;color:var(--text)}
+#menuBtn{display:none}
+.content{flex:1;position:relative;overflow:hidden}
+.view{position:absolute;inset:0;overflow-y:auto;padding:26px}
+.frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+
+/* ===== Home ===== */
+.hello{margin-bottom:22px}
+.hello h1{font-size:1.6rem;font-weight:900}
+.hello p{color:var(--text2);margin-top:2px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+.mod-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;cursor:pointer;transition:all .2s;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.mod-card::after{content:'';position:absolute;inset:auto 0 0 0;height:4px;background:var(--c)}
+.mod-card:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(15,34,64,.13)}
+.mod-card .ico{width:56px;height:56px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:14px;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+.mod-card h3{font-size:1.12rem;font-weight:800;margin-bottom:4px}
+.mod-card p{color:var(--text3);font-size:.85rem;line-height:1.7}
+.mod-card .go{margin-top:14px;font-size:.84rem;font-weight:700;color:var(--c)}
+.empty{text-align:center;color:var(--text3);padding:50px 20px}
+
+/* ===== Panels / tables ===== */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-bottom:18px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.panel-head h3{font-size:1.1rem;font-weight:800}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{text-align:right;color:var(--text3);font-weight:700;font-size:.78rem;padding:10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700;margin:2px;background:#eef2f8;color:var(--text2)}
+.tag.admin{background:#ede7ff;color:#5b3fd6}
+.tag.on{background:#e7f7ee;color:var(--green)}
+.tag.off{background:#fdecec;color:var(--red)}
+.row-actions{display:flex;gap:6px}
+.row-actions .btn{padding:6px 10px;font-size:.8rem}
+.narrow{max-width:520px}
+
+/* ===== Modal ===== */
+.modal{position:fixed;inset:0;background:rgba(10,20,40,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:100}
+.modal-box{background:#fff;border-radius:20px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:24px}
+.modal-box h3{font-size:1.15rem;font-weight:800;margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mod-perm{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;margin-bottom:8px}
+.mod-perm input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.mod-perm .t{flex:1;font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:8px}
+.mod-perm select{padding:6px 8px;border:1.5px solid var(--border);border-radius:9px;font-size:.82rem}
+.modal-actions{display:flex;gap:10px;justify-content:flex-start;margin-top:18px}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:12px 20px;border-radius:12px;font-size:.9rem;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:200;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--red)}
+.toast.ok{background:var(--green)}
+.backdrop{display:none}
+
+@media (max-width:900px){
+  #menuBtn{display:inline-flex}
+  .sidebar{position:fixed;top:0;bottom:0;right:0;z-index:60;transform:translateX(100%)}
+  .sidebar.open{transform:none;box-shadow:-20px 0 60px rgba(0,0,0,.35)}
+  .backdrop.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:55}
+  .view{padding:16px}
+  .grid2{grid-template-columns:1fr}
+  .topbar .wide{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Loading ===== -->
+<div id="scrLoading" class="screen" style="flex-direction:column;gap:14px">
+  <div class="spinner"></div>
+  <div style="color:rgba(255,255,255,.6);font-size:.9rem">جاري التحميل...</div>
+</div>
+
+<!-- ===== Not configured ===== -->
+<div id="scrConfig" class="screen hidden">
+  <div class="auth-card">
+    <div class="auth-logo"><div class="mark"><i class="fas fa-plug"></i></div><h1>النظام غير مربوط بعد</h1><p>خطوة واحدة قبل البدء</p></div>
+    <div class="setup-note">
+      افتح الملف <b>public/core/firebase-config.js</b> وضع فيه بيانات مشروع Firebase الجديد،
+      ثم فعّل <b>Email/Password</b> من Authentication، وأنشئ <b>Firestore Database</b>،
+      وانشر القواعد بالأمر <code>firebase deploy --only firestore:rules</code>.
+      التفاصيل الكاملة في ملف README.md.
+    </div>
+    <button class="btn btn-primary btn-block" onclick="location.reload()"><i class="fas fa-rotate"></i> إعادة المحاولة</button>
+  </div>
+</div>
+
+<!-- ===== First-run setup ===== -->
+<div id="scrSetup" class="screen hidden">
+  <div class="auth-card">
+    <div class="auth-logo"><div class="mark"><i class="fas fa-user-shield"></i></div><h1>إعداد النظام لأول مرة</h1><p>أنشئ حساب مدير النظام</p></div>
+    <div class="setup-note">هذه الشاشة تظهر مرة واحدة فقط. مدير النظام يملك كل الصلاحيات ويستطيع إضافة باقي المستخدمين وتحديد الأنظمة المسموحة لكل واحد.</div>
+    <div class="field"><label>اسم المؤسسة</label><input id="suOrg" placeholder="مثال: مؤسسة كبابجي"></div>
+    <div class="field"><label>الاسم الظاهر</label><input id="suName" placeholder="مثال: المدير العام"></div>
+    <div class="field"><label>اسم المستخدم</label><input id="suUser" autocomplete="username" placeholder="admin"></div>
+    <div class="grid2">
+      <div class="field"><label>كلمة المرور</label><input id="suPass" type="password" autocomplete="new-password"></div>
+      <div class="field"><label>تأكيدها</label><input id="suPass2" type="password" autocomplete="new-password"></div>
+    </div>
+    <button class="btn btn-primary btn-block" id="suBtn" onclick="doSetup()"><i class="fas fa-check"></i> إنشاء الحساب والبدء</button>
+    <div id="suMsg" class="msg err hidden"></div>
+  </div>
+</div>
+
+<!-- ===== Login ===== -->
+<div id="scrLogin" class="screen hidden">
+  <div class="auth-card">
+    <div class="auth-logo"><div class="mark"><i class="fas fa-layer-group"></i></div><h1 class="orgName">النظام الشامل</h1><p>تسجيل دخول واحد لكل الأنظمة</p></div>
+    <div class="field"><label><i class="fas fa-user fa-sm"></i> اسم المستخدم</label><input id="liUser" autocomplete="username"></div>
+    <div class="field"><label><i class="fas fa-lock fa-sm"></i> كلمة المرور</label><input id="liPass" type="password" autocomplete="current-password"></div>
+    <button class="btn btn-primary btn-block" id="liBtn" onclick="doLogin()"><i class="fas fa-right-to-bracket"></i> دخول</button>
+    <div id="liMsg" class="msg err hidden"></div>
+  </div>
+</div>
+
+<!-- ===== App ===== -->
+<div id="app" class="hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark"><i class="fas fa-layer-group"></i></div>
+      <div><b class="orgName">النظام الشامل</b><small>كل الأنظمة في مكان واحد</small></div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item" data-route="home" onclick="go('home')"><span class="ico"><i class="fas fa-house"></i></span>الرئيسية</button>
+      <div class="nav-label">الأنظمة</div>
+      <div id="navModules"></div>
+      <div id="navAdmin" class="hidden">
+        <div class="nav-label">الإدارة</div>
+        <button class="nav-item" data-route="users" onclick="go('users')"><span class="ico"><i class="fas fa-users-gear"></i></span>المستخدمون والصلاحيات</button>
+        <button class="nav-item" data-route="settings" onclick="go('settings')"><span class="ico"><i class="fas fa-sliders"></i></span>إعدادات النظام</button>
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="me">
+        <div class="avatar" id="meAvatar"></div>
+        <div style="flex:1;min-width:0"><b id="meName"></b><small id="meRole"></small></div>
+      </div>
+      <button class="nav-item" data-route="account" onclick="go('account')"><span class="ico"><i class="fas fa-key"></i></span>حسابي وكلمة المرور</button>
+      <button class="nav-item" onclick="logout()" style="color:#ff8787"><span class="ico"><i class="fas fa-right-from-bracket"></i></span>تسجيل الخروج</button>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop" onclick="toggleMenu(false)"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="menuBtn" onclick="toggleMenu()"><i class="fas fa-bars"></i></button>
+      <h2 id="pageTitle">الرئيسية</h2>
+      <button class="icon-btn hidden" id="reloadBtn" title="إعادة تحميل النظام" onclick="reloadCurrent()"><i class="fas fa-rotate-right"></i></button>
+      <button class="icon-btn hidden wide" id="popBtn" title="فتح في نافذة مستقلة" onclick="popCurrent()"><i class="fas fa-up-right-from-square"></i></button>
+    </header>
+
+    <div class="content" id="content">
+      <!-- Home -->
+      <section class="view" id="v-home">
+        <div class="hello"><h1>مرحباً، <span id="helloName"></span></h1><p>اختر النظام الذي تريد العمل عليه</p></div>
+        <div class="cards" id="homeCards"></div>
+      </section>
+
+      <!-- Users -->
+      <section class="view hidden" id="v-users">
+        <div class="panel">
+          <div class="panel-head">
+            <h3><i class="fas fa-users-gear" style="color:var(--accent)"></i> المستخدمون والصلاحيات</h3>
+            <button class="btn btn-primary" onclick="openUserModal()"><i class="fas fa-user-plus"></i> مستخدم جديد</button>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>النوع</th><th>الأنظمة المسموحة</th><th>الحالة</th><th></th></tr></thead>
+              <tbody id="usersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section class="view hidden" id="v-settings">
+        <div class="panel narrow">
+          <div class="panel-head"><h3><i class="fas fa-sliders" style="color:var(--accent)"></i> إعدادات النظام</h3></div>
+          <div class="field"><label>اسم المؤسسة</label><input id="stOrg"></div>
+          <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> حفظ</button>
+        </div>
+        <div class="panel narrow">
+          <div class="panel-head"><h3><i class="fas fa-puzzle-piece" style="color:var(--accent)"></i> الأنظمة المركّبة</h3></div>
+          <div id="modsList"></div>
+          <p style="color:var(--text3);font-size:.82rem;margin-top:10px;line-height:1.8">لإضافة نظام جديد: انسخ <b>modules/_template</b> ثم أضف تعريفه في <b>core/modules.js</b> — التفاصيل في README.md.</p>
+        </div>
+      </section>
+
+      <!-- Account -->
+      <section class="view hidden" id="v-account">
+        <div class="panel narrow">
+          <div class="panel-head"><h3><i class="fas fa-key" style="color:var(--accent)"></i> تغيير كلمة المرور</h3></div>
+          <div class="field"><label>كلمة المرور الحالية</label><input id="acOld" type="password" autocomplete="current-password"></div>
+          <div class="grid2">
+            <div class="field"><label>كلمة المرور الجديدة</label><input id="acNew" type="password" autocomplete="new-password"></div>
+            <div class="field"><label>تأكيدها</label><input id="acNew2" type="password" autocomplete="new-password"></div>
+          </div>
+          <button class="btn btn-primary" id="acBtn" onclick="changePassword()"><i class="fas fa-save"></i> تغيير كلمة المرور</button>
+        </div>
+      </section>
+      <!-- module iframes are appended here -->
+    </div>
+  </div>
+</div>
+
+<!-- ===== User modal ===== -->
+<div id="userModal" class="modal hidden" onclick="if(event.target===this)closeUserModal()">
+  <div class="modal-box">
+    <h3 id="umTitle">مستخدم جديد</h3>
+    <input type="hidden" id="umUid">
+    <div class="grid2">
+      <div class="field"><label>الاسم الظاهر</label><input id="umName"></div>
+      <div class="field"><label>اسم المستخدم</label><input id="umUser" autocomplete="off"><div class="hint">يمكن أن يكون عربياً — لا يمكن تغييره لاحقاً</div></div>
+    </div>
+    <div class="grid2" id="umPassRow">
+      <div class="field"><label>كلمة المرور</label><input id="umPass" type="password" autocomplete="new-password"><div class="hint">6 أحرف على الأقل</div></div>
+      <div class="field"><label>نوع الحساب</label>
+        <select id="umRole" onchange="syncRoleUI()"><option value="user">مستخدم — حسب الأنظمة المحددة</option><option value="admin">مدير النظام — كل الصلاحيات</option></select>
+      </div>
+    </div>
+    <div id="umPermsWrap">
+      <div class="field" style="margin-bottom:6px"><label>الأنظمة المسموحة</label></div>
+      <div id="umPerms"></div>
+    </div>
+    <div id="umAdminNote" class="setup-note hidden" style="margin-top:6px">مدير النظام يدخل كل الأنظمة بصلاحية كاملة، ويدير المستخدمين.</div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="umSave" onclick="saveUser()"><i class="fas fa-save"></i> حفظ</button>
+      <button class="btn btn-light" onclick="closeUserModal()">إلغاء</button>
+    </div>
+    <div id="umMsg" class="msg err hidden"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+var C = window.AllCore;
+var MODULES = window.ALL_MODULES || [];
+var me = null;              // current profile
+var settings = {};          // core_settings/main
+var usersCache = [];
+var frames = {};            // moduleId -> iframe
+var currentRoute = null;
+
+// ── helpers ──────────────────────────────────────────────
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function showScreen(id){
+  ['scrLoading','scrConfig','scrSetup','scrLogin'].forEach(function(s){ $(s).classList.toggle('hidden', s!==id); });
+  $('app').classList.toggle('hidden', id!=='app');
+}
+function showMsg(id, text, ok){ var el=$(id); el.textContent=text; el.className='msg '+(ok?'ok':'err'); }
+function hideMsg(id){ $(id).className='msg err hidden'; }
+var _tt;
+function toast(text, type){
+  var el=$('toast'); el.textContent=text; el.className='toast show '+(type||'');
+  clearTimeout(_tt); _tt=setTimeout(function(){ el.className='toast'; },2800);
+}
+function authErr(e){
+  var c = e && e.code || '';
+  if (c==='auth/wrong-password'||c==='auth/user-not-found'||c==='auth/invalid-credential'||c==='auth/invalid-login-credentials') return 'اسم المستخدم أو كلمة المرور غير صحيحة';
+  if (c==='auth/too-many-requests') return 'محاولات كثيرة — انتظر قليلاً ثم أعد المحاولة';
+  if (c==='auth/email-already-in-use') return 'اسم المستخدم مستخدم مسبقاً';
+  if (c==='auth/weak-password') return 'كلمة المرور ضعيفة — 6 أحرف على الأقل';
+  if (c==='auth/network-request-failed') return 'لا يوجد اتصال بالإنترنت';
+  if (c==='auth/operation-not-allowed') return 'فعّل Email/Password من إعدادات Authentication في Firebase';
+  if (c==='permission-denied') return 'لا تملك الصلاحية لهذه العملية (تحقق من نشر firestore.rules)';
+  return (e && e.message) || 'حدث خطأ غير متوقع';
+}
+function allowedModules(){ return MODULES.filter(function(m){ return C.canUse(me, m.id); }); }
+
+// ── boot ─────────────────────────────────────────────────
+function boot(){
+  if (!C.configured) { showScreen('scrConfig'); return; }
+  C.db.collection('core_meta').doc('bootstrap').get().then(function(b){
+    if (!b.exists) { showScreen('scrSetup'); return; }
+    return C.session().then(function(s){
+      if (s) { enterApp(s.profile); }
+      else { loadPublicOrg(); showScreen('scrLogin'); setTimeout(function(){ $('liUser').focus(); },50); }
+    });
+  }).catch(function(e){
+    console.error(e);
+    showScreen('scrConfig');
+    toast(authErr(e),'err');
+  });
+}
+function loadPublicOrg(){
+  C.db.collection('core_meta').doc('bootstrap').get().then(function(d){
+    var org = d.exists && d.data().orgName;
+    if (org) document.querySelectorAll('.orgName').forEach(function(el){ el.textContent = org; });
+  }).catch(function(){});
+}
+
+// ── first-run setup ──────────────────────────────────────
+function doSetup(){
+  hideMsg('suMsg');
+  var org=$('suOrg').value.trim(), name=$('suName').value.trim(), user=$('suUser').value.trim(),
+      p1=$('suPass').value, p2=$('suPass2').value;
+  if (!name||!user||!p1) return showMsg('suMsg','يرجى تعبئة جميع الحقول');
+  if (p1!==p2) return showMsg('suMsg','كلمتا المرور غير متطابقتين');
+  if (p1.length<6) return showMsg('suMsg','كلمة المرور 6 أحرف على الأقل');
+  var btn=$('suBtn'); btn.disabled=true;
+  C.auth.createUserWithEmailAndPassword(C.usernameToEmail(user), p1).then(function(cred){
+    var uid=cred.user.uid, now=firebase.firestore.FieldValue.serverTimestamp();
+    var batch=C.db.batch();
+    batch.set(C.db.collection('core_users').doc(uid), {
+      uid:uid, username:user, name:name, email:C.usernameToEmail(user),
+      role:'admin', active:true, modules:[], moduleRoles:{}, createdAt:now, createdBy:uid
+    });
+    batch.set(C.db.collection('core_meta').doc('bootstrap'), { uid:uid, orgName:org||'', at:now });
+    batch.set(C.db.collection('core_settings').doc('main'), { orgName:org||'' }, { merge:true });
+    return batch.commit().then(function(){ return C.loadProfile(uid); });
+  }).then(function(p){ enterApp(p); toast('تم إعداد النظام بنجاح ✓','ok'); })
+    .catch(function(e){ console.error(e); showMsg('suMsg', authErr(e)); })
+    .then(function(){ btn.disabled=false; });
+}
+
+// ── login / logout ───────────────────────────────────────
+function doLogin(){
+  hideMsg('liMsg');
+  var u=$('liUser').value.trim(), p=$('liPass').value;
+  if (!u||!p) return showMsg('liMsg','يرجى إدخال اسم المستخدم وكلمة المرور');
+  var btn=$('liBtn'); btn.disabled=true;
+  C.signIn(u,p).then(enterApp)
+    .catch(function(e){ showMsg('liMsg', authErr(e)); $('liPass').value=''; })
+    .then(function(){ btn.disabled=false; });
+}
+$('liPass').addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(); });
+$('liUser').addEventListener('keydown',function(e){ if(e.key==='Enter') $('liPass').focus(); });
+
+function logout(){
+  if (!confirm('هل تريد تسجيل الخروج؟')) return;
+  C.signOut().then(function(){ location.hash=''; location.reload(); });
+}
+
+// ── app ──────────────────────────────────────────────────
+function enterApp(profile){
+  me = profile;
+  showScreen('app');
+  $('meName').textContent = me.name || me.username;
+  $('meRole').textContent = C.isAdmin(me) ? 'مدير النظام' : 'مستخدم';
+  $('meAvatar').textContent = (me.name||me.username||'؟').charAt(0);
+  $('helloName').textContent = me.name || me.username;
+  $('navAdmin').classList.toggle('hidden', !C.isAdmin(me));
+  renderNav();
+  C.db.collection('core_settings').doc('main').onSnapshot(function(d){
+    settings = d.exists ? d.data() : {};
+    var org = settings.orgName || 'النظام الشامل';
+    document.querySelectorAll('.orgName').forEach(function(el){ el.textContent = org; });
+    document.title = org;
+  }, function(){});
+  // live profile updates (permissions changed / account disabled by admin)
+  C.db.collection('core_users').doc(me.uid).onSnapshot(function(d){
+    if (!d.exists || d.data().active===false) { C.signOut().then(function(){ location.reload(); }); return; }
+    var prevMods = JSON.stringify([me.role, me.modules]);
+    me = Object.assign({uid:me.uid}, d.data());
+    if (JSON.stringify([me.role, me.modules]) !== prevMods) {
+      $('navAdmin').classList.toggle('hidden', !C.isAdmin(me));
+      renderNav(); route();
+    }
+  }, function(){});
+  route();
+}
+
+function renderNav(){
+  var mods = allowedModules();
+  $('navModules').innerHTML = mods.length ? mods.map(function(m){
+    return '<button class="nav-item'+(frames[m.id]?' loaded':'')+'" data-route="m/'+esc(m.id)+'" style="--c:'+esc(m.color)+'" onclick="go(\'m/'+esc(m.id)+'\')">'+
+      '<span class="ico"><i class="fas '+esc(m.icon)+'"></i></span>'+esc(m.title)+'<span class="dot"></span></button>';
+  }).join('') : '<div style="color:rgba(255,255,255,.4);font-size:.8rem;padding:6px 12px">لا توجد أنظمة مسموحة</div>';
+  $('homeCards').innerHTML = mods.length ? mods.map(function(m){
+    return '<div class="mod-card" style="--c:'+esc(m.color)+'" onclick="go(\'m/'+esc(m.id)+'\')">'+
+      '<div class="ico"><i class="fas '+esc(m.icon)+'"></i></div><h3>'+esc(m.title)+'</h3><p>'+esc(m.description||'')+'</p>'+
+      '<div class="go">دخول <i class="fas fa-arrow-left fa-sm"></i></div></div>';
+  }).join('') : '<div class="empty"><i class="fas fa-lock fa-2x" style="margin-bottom:10px"></i><div>لم تُمنح صلاحية لأي نظام بعد — راجع مدير النظام.</div></div>';
+}
+
+// ── routing ──────────────────────────────────────────────
+function go(r){ location.hash = '#/'+r; toggleMenu(false); }
+window.addEventListener('hashchange', route);
+window.addEventListener('message', function(e){
+  if (e.origin !== location.origin || !e.data) return;
+  if (e.data.type === 'all:home') go('home');
+});
+
+function route(){
+  if (!me) return;
+  var r = (location.hash||'').replace(/^#\/?/,'') || 'home';
+  var adminViews = ['users','settings'];
+  if (adminViews.indexOf(r)!==-1 && !C.isAdmin(me)) r='home';
+  var modId = r.indexOf('m/')===0 ? r.slice(2) : null;
+  var mod = modId ? C.getModule(modId) : null;
+  if (modId && (!mod || !C.canUse(me, modId))) { r='home'; modId=null; mod=null; }
+  currentRoute = r;
+
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.add('hidden'); });
+  Object.keys(frames).forEach(function(id){ frames[id].classList.add('hidden'); });
+  // drop frames of modules the user lost access to
+  Object.keys(frames).forEach(function(id){ if(!C.canUse(me,id)){ frames[id].remove(); delete frames[id]; } });
+
+  if (mod) {
+    if (!frames[mod.id]) {
+      var f=document.createElement('iframe');
+      f.className='frame'; f.src=mod.path; f.title=mod.title;
+      f.setAttribute('allow','clipboard-write');
+      $('content').appendChild(f); frames[mod.id]=f;
+      renderNav();
+    }
+    frames[mod.id].classList.remove('hidden');
+    $('pageTitle').textContent = mod.title;
+  } else {
+    var v=$('v-'+r) || $('v-home');
+    v.classList.remove('hidden');
+    $('pageTitle').textContent = {home:'الرئيسية',users:'المستخدمون والصلاحيات',settings:'إعدادات النظام',account:'حسابي'}[r] || 'الرئيسية';
+    if (r==='users') loadUsers();
+    if (r==='settings') renderSettings();
+  }
+  $('reloadBtn').classList.toggle('hidden', !mod);
+  $('popBtn').classList.toggle('hidden', !mod);
+  document.querySelectorAll('.nav-item[data-route]').forEach(function(b){ b.classList.toggle('active', b.dataset.route===r); });
+}
+function reloadCurrent(){
+  var id = currentRoute && currentRoute.indexOf('m/')===0 && currentRoute.slice(2);
+  if (id && frames[id]) frames[id].src = C.getModule(id).path;
+}
+function popCurrent(){
+  var id = currentRoute && currentRoute.indexOf('m/')===0 && currentRoute.slice(2);
+  if (id) window.open(C.getModule(id).path, '_blank');
+}
+function toggleMenu(force){
+  var open = typeof force==='boolean' ? force : !$('sidebar').classList.contains('open');
+  $('sidebar').classList.toggle('open', open);
+  $('backdrop').classList.toggle('show', open);
+}
+
+// ── users admin ──────────────────────────────────────────
+function loadUsers(){
+  $('usersBody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3)">جاري التحميل...</td></tr>';
+  C.db.collection('core_users').get().then(function(snap){
+    usersCache=[]; snap.forEach(function(d){ usersCache.push(Object.assign({uid:d.id}, d.data())); });
+    usersCache.sort(function(a,b){ return (b.role==='admin')-(a.role==='admin') || String(a.name).localeCompare(String(b.name),'ar'); });
+    renderUsers();
+  }).catch(function(e){ toast(authErr(e),'err'); });
+}
+function renderUsers(){
+  $('usersBody').innerHTML = usersCache.map(function(u){
+    var mods = u.role==='admin' ? '<span class="tag admin">كل الأنظمة</span>' :
+      ((u.modules||[]).map(function(id){
+        var m=C.getModule(id); if(!m) return '';
+        var role = m.roles && u.moduleRoles && u.moduleRoles[id];
+        var rl = role ? (m.roles.filter(function(r){return r.id===role;})[0]||{}).label : '';
+        return '<span class="tag">'+esc(m.title)+(rl?' · '+esc(rl):'')+'</span>';
+      }).join('') || '<span style="color:var(--text3);font-size:.8rem">—</span>');
+    var self = u.uid===me.uid;
+    return '<tr><td><b>'+esc(u.name)+'</b>'+(self?' <span class="tag">أنت</span>':'')+'</td><td>'+esc(u.username)+'</td>'+
+      '<td>'+(u.role==='admin'?'<span class="tag admin">مدير النظام</span>':'<span class="tag">مستخدم</span>')+'</td>'+
+      '<td>'+mods+'</td><td>'+(u.active!==false?'<span class="tag on">فعّال</span>':'<span class="tag off">موقوف</span>')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="btn btn-light" onclick="openUserModal(\''+esc(u.uid)+'\')"><i class="fas fa-pen"></i> تعديل</button>'+
+        (self?'':(u.active!==false
+          ?'<button class="btn btn-danger" onclick="setActive(\''+esc(u.uid)+'\',false)"><i class="fas fa-ban"></i> إيقاف</button>'
+          :'<button class="btn btn-success" onclick="setActive(\''+esc(u.uid)+'\',true)"><i class="fas fa-check"></i> تفعيل</button>'))+
+      '</div></td></tr>';
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text3)">لا يوجد مستخدمون</td></tr>';
+}
+function openUserModal(uid){
+  hideMsg('umMsg');
+  var u = uid ? usersCache.filter(function(x){return x.uid===uid;})[0] : null;
+  $('umTitle').textContent = u ? 'تعديل المستخدم' : 'مستخدم جديد';
+  $('umUid').value = u ? u.uid : '';
+  $('umName').value = u ? (u.name||'') : '';
+  $('umUser').value = u ? (u.username||'') : '';
+  $('umUser').disabled = !!u;
+  $('umPass').value = '';
+  $('umPass').closest('.field').classList.toggle('hidden', !!u);
+  $('umRole').value = u ? (u.role||'user') : 'user';
+  $('umRole').disabled = !!(u && u.uid===me.uid);
+  $('umPerms').innerHTML = MODULES.map(function(m){
+    var on = u && (u.modules||[]).indexOf(m.id)!==-1;
+    var roleSel = (m.roles&&m.roles.length) ? '<select data-role-for="'+esc(m.id)+'">'+m.roles.map(function(r){
+      var sel = u && u.moduleRoles && u.moduleRoles[m.id]===r.id;
+      return '<option value="'+esc(r.id)+'"'+(sel?' selected':'')+'>'+esc(r.label)+'</option>';
+    }).join('')+'</select>' : '';
+    return '<label class="mod-perm"><input type="checkbox" data-mod="'+esc(m.id)+'"'+(on?' checked':'')+'>'+
+      '<span class="t"><i class="fas '+esc(m.icon)+'" style="color:'+esc(m.color)+'"></i>'+esc(m.title)+'</span>'+roleSel+'</label>';
+  }).join('');
+  syncRoleUI();
+  $('userModal').classList.remove('hidden');
+  setTimeout(function(){ (u?$('umName'):$('umName')).focus(); },50);
+}
+function closeUserModal(){ $('userModal').classList.add('hidden'); }
+function syncRoleUI(){
+  var admin = $('umRole').value==='admin';
+  $('umPermsWrap').classList.toggle('hidden', admin);
+  $('umAdminNote').classList.toggle('hidden', !admin);
+}
+function collectPerms(){
+  var modules=[], moduleRoles={};
+  document.querySelectorAll('#umPerms input[data-mod]').forEach(function(cb){
+    if (!cb.checked) return;
+    var id=cb.dataset.mod; modules.push(id);
+    var sel=document.querySelector('#umPerms select[data-role-for="'+id+'"]');
+    if (sel) moduleRoles[id]=sel.value;
+  });
+  return { modules:modules, moduleRoles:moduleRoles };
+}
+function saveUser(){
+  hideMsg('umMsg');
+  var uid=$('umUid').value, name=$('umName').value.trim(), username=$('umUser').value.trim(),
+      pass=$('umPass').value, role=$('umRole').value, perms=collectPerms();
+  if (!name) return showMsg('umMsg','الاسم مطلوب');
+  var btn=$('umSave'); btn.disabled=true;
+  var done=function(){ btn.disabled=false; };
+  if (uid) {
+    C.db.collection('core_users').doc(uid).update({ name:name, role:role, modules:perms.modules, moduleRoles:perms.moduleRoles })
+      .then(function(){ closeUserModal(); toast('تم الحفظ ✓','ok'); loadUsers(); })
+      .catch(function(e){ showMsg('umMsg', authErr(e)); }).then(done);
+    return;
+  }
+  if (!username) { done(); return showMsg('umMsg','اسم المستخدم مطلوب'); }
+  if (pass.length<6) { done(); return showMsg('umMsg','كلمة المرور 6 أحرف على الأقل'); }
+  // ننشئ حساب الدخول عبر نسخة ثانوية من Firebase حتى لا تُستبدل جلسة المدير الحالية
+  var sec = firebase.apps.filter(function(a){return a.name==='userAdmin';})[0] || firebase.initializeApp(C.config,'userAdmin');
+  var secAuth = sec.auth();
+  var email = C.usernameToEmail(username);
+  secAuth.setPersistence(firebase.auth.Auth.Persistence.NONE)
+    .then(function(){ return secAuth.createUserWithEmailAndPassword(email, pass); })
+    .then(function(cred){
+      var newUid=cred.user.uid;
+      return secAuth.signOut().then(function(){
+        return C.db.collection('core_users').doc(newUid).set({
+          uid:newUid, username:username, name:name, email:email, role:role, active:true,
+          modules:perms.modules, moduleRoles:perms.moduleRoles,
+          createdAt:firebase.firestore.FieldValue.serverTimestamp(), createdBy:me.uid
+        });
+      });
+    })
+    .then(function(){ closeUserModal(); toast('تمت إضافة المستخدم ✓','ok'); loadUsers(); })
+    .catch(function(e){ console.error(e); showMsg('umMsg', authErr(e)); }).then(done);
+}
+function setActive(uid, active){
+  var u = usersCache.filter(function(x){return x.uid===uid;})[0];
+  if (!active && !confirm('إيقاف حساب "'+(u&&u.name)+'"؟ لن يستطيع الدخول لأي نظام.')) return;
+  C.db.collection('core_users').doc(uid).update({active:active})
+    .then(function(){ toast(active?'تم تفعيل الحساب ✓':'تم إيقاف الحساب','ok'); loadUsers(); })
+    .catch(function(e){ toast(authErr(e),'err'); });
+}
+
+// ── settings ─────────────────────────────────────────────
+function renderSettings(){
+  $('stOrg').value = settings.orgName || '';
+  $('modsList').innerHTML = MODULES.map(function(m){
+    return '<div class="mod-perm" style="cursor:default"><span class="t"><i class="fas '+esc(m.icon)+'" style="color:'+esc(m.color)+'"></i>'+esc(m.title)+
+      '</span><code style="font-size:.78rem;color:var(--text3)">'+esc(m.id)+'_*</code></div>';
+  }).join('');
+}
+function saveSettings(){
+  var org=$('stOrg').value.trim();
+  var b=C.db.batch();
+  b.set(C.db.collection('core_settings').doc('main'), {orgName:org}, {merge:true});
+  b.set(C.db.collection('core_meta').doc('bootstrap'), {orgName:org}, {merge:true});
+  b.commit().then(function(){ toast('تم الحفظ ✓','ok'); }).catch(function(e){ toast(authErr(e),'err'); });
+}
+
+// ── account ──────────────────────────────────────────────
+function changePassword(){
+  var o=$('acOld').value, n1=$('acNew').value, n2=$('acNew2').value;
+  if (!o||!n1) return toast('أدخل كلمة المرور الحالية والجديدة','err');
+  if (n1!==n2) return toast('كلمتا المرور غير متطابقتين','err');
+  if (n1.length<6) return toast('كلمة المرور 6 أحرف على الأقل','err');
+  var u=C.auth.currentUser; var btn=$('acBtn'); btn.disabled=true;
+  var cred=firebase.auth.EmailAuthProvider.credential(u.email, o);
+  u.reauthenticateWithCredential(cred).then(function(){ return u.updatePassword(n1); })
+    .then(function(){ ['acOld','acNew','acNew2'].forEach(function(i){$(i).value='';}); toast('تم تغيير كلمة المرور ✓','ok'); })
+    .catch(function(e){ toast(authErr(e),'err'); }).then(function(){ btn.disabled=false; });
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function(){});
+boot();
+</script>
+</body>
+</html>

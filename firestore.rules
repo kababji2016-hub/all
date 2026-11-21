@@ -1,0 +1,61 @@
+rules_version = '2';
+// ============================================================
+//  قواعد حماية النظام الشامل
+//  ------------------------------------------------------------
+//  - لا وصول لأي بيانات بدون تسجيل دخول (Firebase Auth) وحساب فعّال في core_users
+//  - مجموعات كل نظام تبدأ ببادئة معرّفه:  finance_* / payroll_* / docs_* / journal_* ...
+//    والصلاحية تُمنح تلقائياً حسب البادئة: المستخدم يصل لـ "<id>_*" فقط إن كان
+//    id ضمن الأنظمة المسموحة له (أو كان مدير النظام).
+//  - أي نظام جديد يلتزم بالبادئة يصبح محمياً تلقائياً — لا حاجة لتعديل هذا الملف.
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userPath(uid) { return /databases/$(database)/documents/core_users/$(uid); }
+    function me() { return get(userPath(request.auth.uid)).data; }
+    function isActive() { return signedIn() && exists(userPath(request.auth.uid)) && me().active == true; }
+    function isAdmin() { return isActive() && me().role == 'admin'; }
+    function canUse(moduleId) {
+      return isActive() && (me().role == 'admin' || moduleId in me().modules);
+    }
+    function bootstrapPath() { return /databases/$(database)/documents/core_meta/bootstrap; }
+
+    // ── النواة ─────────────────────────────────────────────
+    // bootstrap: مقروء للجميع (لمعرفة هل تم الإعداد + اسم المؤسسة في شاشة الدخول)
+    match /core_meta/bootstrap {
+      allow read: if true;
+      allow create: if signedIn() && !exists(bootstrapPath())
+                    && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin() && request.resource.data.uid == resource.data.uid;
+      allow delete: if false;
+    }
+
+    match /core_users/{uid} {
+      allow read: if signedIn();
+      // إنشاء أول مدير مرة واحدة فقط (مع إنشاء bootstrap في نفس الدفعة)، أو بواسطة مدير
+      allow create: if isAdmin()
+                    || (signedIn() && request.auth.uid == uid
+                        && !exists(bootstrapPath())
+                        && existsAfter(bootstrapPath())
+                        && request.resource.data.role == 'admin');
+      // المدير لا يستطيع إيقاف نفسه أو سحب صلاحية الإدارة من نفسه
+      allow update: if isAdmin()
+                    && (uid != request.auth.uid
+                        || (request.resource.data.role == 'admin' && request.resource.data.active == true));
+      allow delete: if isAdmin() && uid != request.auth.uid;
+    }
+
+    match /core_settings/{doc} {
+      allow read: if signedIn();
+      allow write: if isAdmin()
+                   || (signedIn() && !exists(bootstrapPath()) && existsAfter(bootstrapPath()));
+    }
+
+    // ── بيانات الأنظمة: الصلاحية حسب بادئة اسم المجموعة ─────
+    match /{col}/{docId} {
+      allow read, write: if !col.matches('^core_.*') && col.matches('^[a-z0-9]+_.+')
+                         && canUse(col.split('_')[0]);
+    }
+  }
+}
