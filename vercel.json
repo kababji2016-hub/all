@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "",
+  "installCommand": "",
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/finance", "destination": "/modules/finance/index.html" },
+    { "source": "/payroll", "destination": "/modules/payroll/index.html" },
+    { "source": "/docs", "destination": "/modules/docs/index.html" },
+    { "source": "/journal", "destination": "/modules/journal/index.html" }
+  ],
+  "headers": [
+    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/core/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/(.*).html", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+    { "source": "/modules/_template/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] }
+  ]
+}
