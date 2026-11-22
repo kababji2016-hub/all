@@ -81,7 +81,7 @@ all/
 | الرواتب `payroll` | `payroll_employees`, `payroll_loans`, `payroll_deductions`, `payroll_branches`, `payroll_settings`, `payroll_deliveries`, `payroll_history_details`, `payroll_sheets` |
 | الوثائق `docs` | `docs_documents`, `docs_tasks`, `docs_tasks_done`, `docs_settings` |
 | اليوميات `journal` | `journal_entries`, `journal_settings` |
-| الصيانة `maint` | `maint_categories`, `maint_assets`, `maint_records` |
+| الصيانة `maint` | `maint_categories`, `maint_assets`, `maint_records`, `maint_files` (صور الفواتير مضغوطة) |
 
 **قاعدة الحماية:** المستخدم يصل إلى `<id>_*` فقط إن كان النظام `<id>` من الأنظمة المسموحة له.
 لذلك أي نظام جديد يلتزم بالبادئة يصبح محمياً تلقائياً دون تعديل `firestore.rules`.

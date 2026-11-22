@@ -90,6 +90,28 @@
   .icon-pick button.on{background:var(--ui-primary);color:#fff;border-color:var(--ui-primary)}
   .toast{position:fixed;bottom:22px;left:22px;background:var(--ui-primary);color:#fff;padding:.7rem 1.1rem;border-radius:10px;font-size:.86rem;z-index:1000;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none}
   .toast.show{opacity:1;transform:none}.toast.err{background:#c62828}.toast.ok{background:#2e7d32}
+  /* ── المرفقات ── */
+  .files{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.5rem}
+  .file{position:relative;width:96px;height:96px;border-radius:10px;border:1px solid var(--ui-border);background:var(--ui-surface2);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .file img{width:100%;height:100%;object-fit:cover}
+  .file .pdf{display:flex;flex-direction:column;align-items:center;gap:.3rem;color:#c62828;font-size:.7rem;padding:.3rem;text-align:center;word-break:break-all}
+  .file .pdf i{font-size:1.6rem}
+  .file .rm{position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:6px;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:.75rem}
+  .file-add{border:1.5px dashed #b9c4d4;color:var(--ui-text3);flex-direction:column;gap:.3rem;font-size:.72rem}
+  .file-add i{font-size:1.3rem}
+  .file-add:hover{border-color:var(--ui-accent);color:var(--ui-accent)}
+  /* ── التقارير ── */
+  .bar{height:8px;border-radius:4px;background:var(--ui-accent);min-width:2px}
+  .bar-wrap{background:#eef2f8;border-radius:4px;width:100%;min-width:80px}
+  .best{background:#e8f5e9!important}
+  .rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+  .rep-grid .ui-card{margin-bottom:0}
+  .months{display:flex;align-items:flex-end;gap:6px;height:160px;padding:1rem 1.2rem .4rem}
+  .months .m{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+  .months .m .v{width:100%;background:var(--ui-accent);border-radius:5px 5px 0 0;min-height:2px}
+  .months .m small{font-size:.66rem;color:var(--ui-text3);white-space:nowrap}
+  .months .m b{font-size:.66rem;color:var(--ui-text2)}
+  @media(max-width:860px){ .rep-grid{grid-template-columns:1fr} }
   @media(max-width:860px){
     .sb{position:static;width:auto;min-height:0}
     .sb .ui-sb-brand{display:none}
@@ -155,6 +177,35 @@
     </div>
   </section>
 
+  <!-- ===== التقارير والمقارنات ===== -->
+  <section id="v-reports" class="hidden">
+    <div class="ui-card"><div class="filters" style="border:0">
+      <select id="repCat" onchange="renderReports()"></select>
+      <input id="repFrom" type="date" onchange="renderReports()" title="من تاريخ">
+      <input id="repTo" type="date" onchange="renderReports()" title="إلى تاريخ">
+      <button class="btn btn-sm btn-light" onclick="setRepRange(90)">آخر 3 شهور</button>
+      <button class="btn btn-sm btn-light" onclick="setRepRange(365)">آخر سنة</button>
+      <button class="btn btn-sm btn-light" onclick="setRepRange(0)">الكل</button>
+    </div></div>
+    <div class="ui-stats" id="repStats"></div>
+    <div class="ui-card">
+      <div class="ui-card-h"><span><i class="fa-solid fa-chart-column"></i> التكلفة الشهرية — آخر 12 شهر</span></div>
+      <div class="months" id="repMonths"></div>
+    </div>
+    <div class="rep-grid">
+      <div class="ui-card"><div class="ui-card-h"><span><i class="fa-solid fa-sack-dollar"></i> الأكثر تكلفة</span></div>
+        <div class="tbl-wrap"><table><thead><tr><th>الأصل</th><th>الصيانات</th><th>التكلفة</th><th style="width:30%"></th></tr></thead><tbody id="repAssets"></tbody></table></div></div>
+      <div class="ui-card"><div class="ui-card-h"><span><i class="fa-solid fa-repeat"></i> الأعطال الأكثر تكراراً</span></div>
+        <div class="tbl-wrap"><table><thead><tr><th>العطل</th><th>المرات</th><th>الأصول</th><th>التكلفة</th></tr></thead><tbody id="repFaults"></tbody></table></div></div>
+    </div>
+    <div class="ui-card" style="margin-top:1.2rem"><div class="ui-card-h"><span><i class="fa-solid fa-warehouse"></i> مقارنة الورش</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>الورشة</th><th>عدد الأعمال</th><th>إجمالي التكلفة</th><th>متوسط العمل</th><th>أكثر عطل عندها</th></tr></thead><tbody id="repShops"></tbody></table></div></div>
+    <div class="ui-card"><div class="ui-card-h"><span><i class="fa-solid fa-scale-balanced"></i> أي ورشة أرخص لنفس العطل؟</span><span class="muted" style="color:rgba(255,255,255,.7)">الأعطال التي تمت في أكثر من ورشة — الأخضر الأرخص</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>العطل</th><th>الورشة</th><th>المرات</th><th>متوسط التكلفة</th><th>الفرق عن الأرخص</th></tr></thead><tbody id="repCheapest"></tbody></table></div></div>
+    <div class="ui-card"><div class="ui-card-h"><span><i class="fa-solid fa-shield-halved"></i> قطع تحت الضمان حالياً</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>الأصل</th><th>القطعة</th><th>تاريخ التركيب</th><th>الورشة</th><th>الضمان حتى</th><th>المتبقي</th></tr></thead><tbody id="repWarranty"></tbody></table></div></div>
+  </section>
+
   <!-- ===== الإعدادات: أقسام الصيانة ===== -->
   <section id="v-settings" class="hidden">
     <div class="ui-card">
@@ -183,8 +234,9 @@
       </div>
 
       <div class="section-t"><i class="fa-solid fa-gears"></i> قطع الغيار المستبدلة</div>
-      <table class="parts"><thead><tr><th style="width:55%">القطعة</th><th style="width:15%">الكمية</th><th style="width:20%">التكلفة</th><th></th></tr></thead><tbody id="partsBody"></tbody></table>
+      <table class="parts"><thead><tr><th style="width:44%">القطعة</th><th style="width:12%">الكمية</th><th style="width:17%">التكلفة</th><th style="width:17%">الضمان (شهور)</th><th></th></tr></thead><tbody id="partsBody"></tbody></table>
       <button class="btn btn-sm btn-light" style="margin-top:.5rem" onclick="addPartRow()"><i class="fa-solid fa-plus"></i> إضافة قطعة</button>
+      <div id="warrantyNote"></div>
 
       <div class="grid" style="margin-top:1rem">
         <div class="f"><label>مكان الصيانة (الورشة)</label><input id="rWorkshop" list="dlWorkshops" placeholder="اسم الورشة / الشركة"></div>
@@ -195,6 +247,10 @@
         <div class="f"><label>&nbsp;</label><div class="total-box"><span>القطع: <b id="tParts">0</b></span><span>الإجمالي: <b id="tTotal" style="color:var(--ui-accent)">0</b></span></div></div>
         <div class="f span3"><label>ملاحظات</label><textarea id="rNotes" placeholder="أي تفاصيل إضافية..."></textarea></div>
       </div>
+      <div class="section-t"><i class="fa-solid fa-paperclip"></i> صور الفاتورة والمرفقات</div>
+      <div class="files" id="formFiles"></div>
+      <input type="file" id="fileInput" accept="image/*,application/pdf" multiple class="hidden" onchange="onFilesPicked(this)">
+      <div class="hint">صور (تُضغط تلقائياً) أو PDF حتى 900 كيلوبايت — من الجوال يمكن التصوير بالكاميرا مباشرة</div>
     </div>
     <div class="modal-f">
       <button class="btn btn-primary" id="rSave" onclick="saveRecord()"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
@@ -366,7 +422,8 @@ function renderNav(){
     var cnt = records.filter(function(r){ return r.category === c.id; }).length;
     html += '<button class="nav-link' + (view === 'cat' && curCat === c.id ? ' active' : '') + '" onclick="go(\'cat\',\'' + esc(c.id) + '\')"><i class="fa-solid ' + esc(c.icon || 'fa-screwdriver-wrench') + '"></i> ' + esc(c.name) + (cnt ? '<span class="nav-count">' + cnt + '</span>' : '') + '</button>';
   });
-  html += '<button class="nav-link' + (view === 'settings' ? ' active' : '') + '" onclick="go(\'settings\')" style="margin-top:.5rem;border-top:1px solid rgba(255,255,255,.08)"><i class="fa-solid fa-sliders"></i> أقسام الصيانة</button>';
+  html += '<button class="nav-link' + (view === 'reports' ? ' active' : '') + '" onclick="go(\'reports\')" style="margin-top:.5rem;border-top:1px solid rgba(255,255,255,.08)"><i class="fa-solid fa-chart-pie"></i> التقارير والمقارنات</button>';
+  html += '<button class="nav-link' + (view === 'settings' ? ' active' : '') + '" onclick="go(\'settings\')"><i class="fa-solid fa-sliders"></i> أقسام الصيانة</button>';
   $('nav').innerHTML = html;
 }
 function go(v, catId){
@@ -376,11 +433,12 @@ function go(v, catId){
   window.scrollTo(0, 0);
 }
 function render(){
-  ['dash', 'cat', 'settings'].forEach(function(v){ $('v-' + v).classList.toggle('hidden', v !== view); });
+  ['dash', 'cat', 'reports', 'settings'].forEach(function(v){ $('v-' + v).classList.toggle('hidden', v !== view); });
   var c = catById(curCat);
   if (view === 'cat' && !c) { view = 'dash'; return render(); }
   if (view === 'dash') { setHeader('fa-gauge-high', 'لوحة الصيانة', 'كل أقسام الصيانة في مكان واحد'); renderDash(); }
   else if (view === 'cat') { setHeader(c.icon, c.name, 'السجل الكامل لكل ' + (c.asset || 'أصل') + ' وتاريخ أعطاله'); renderCat(); }
+  else if (view === 'reports') { setHeader('fa-chart-pie', 'التقارير والمقارنات', 'أكثر الأصول تكلفة، أكثر الأعطال تكراراً، أي ورشة أرخص، والقطع تحت الضمان'); renderReports(); }
   else { setHeader('fa-sliders', 'أقسام الصيانة', 'أضف أي قسم صيانة جديد وسيظهر في القائمة فوراً'); renderSettings(); }
 }
 function setHeader(icon, title, sub){ $('phIcon').className = 'fa-solid ' + (icon || 'fa-screwdriver-wrench'); $('phTitle').textContent = title; $('phSub').textContent = sub; }
@@ -470,7 +528,7 @@ function renderRecords(){
   $('recBody').innerHTML = rows.length ? rows.map(function(r){
     return '<tr><td class="num">' + fmtDate(r.date) + '</td><td><b>' + esc(r.assetName) + '</b>' + (veh && r.odometer ? '<div class="muted">' + fmt(r.odometer) + ' كم</div>' : '') + '</td>' +
       (veh ? '<td>' + esc(r.driver || '—') + '</td>' : '') +
-      '<td>' + esc(r.fault) + '</td><td>' + (partsText(r) ? '<span class="muted" style="font-size:.8rem;color:var(--ui-text2)">' + esc(partsText(r)) + '</span>' : '—') + '</td>' +
+      '<td>' + esc(r.fault) + (r.filesCount ? ' <i class="fa-solid fa-paperclip muted" title="' + r.filesCount + ' مرفق"></i>' : '') + '</td><td>' + (partsText(r) ? '<span class="muted" style="font-size:.8rem;color:var(--ui-text2)">' + esc(partsText(r)) + '</span>' : '—') + '</td>' +
       '<td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td>' +
       '<td class="acts"><button class="icon-btn" title="عرض" onclick="viewRecord(\'' + r.id + '\')"><i class="fa-solid fa-eye"></i></button>' +
       '<button class="icon-btn" title="تعديل" onclick="openRecord(\'' + r.id + '\')"><i class="fa-solid fa-pen"></i></button>' +
@@ -518,6 +576,9 @@ function openRecord(id, assetId){
   $('partsBody').innerHTML = '';
   (r && r.parts && r.parts.length ? r.parts : [{}]).forEach(function(p){ addPartRow(p); });
   applyCatFields();
+  formFiles = [];
+  if (r && r.filesCount) { formFiles = [{ name: '...', type: '', data: null }]; loadFiles(r.id).then(function(fs){ if ($('rId').value !== r.id) return; formFiles = fs.map(function(f){ return { id: f.id, name: f.name, type: f.type, data: f.data, size: f.size }; }); renderFormFiles(); }); }
+  renderFormFiles();
   if (!r && assetId) onRecAssetChange(); else updateNotes();
   calcTotal();
   openModal('recModal');
@@ -558,6 +619,7 @@ function onFaultInput(){ clearTimeout(_fTimer); _fTimer = setTimeout(updateNotes
 
 // الملاحظات الذكية: آخر صيانة للأصل + آخر مرة لنفس العطل
 function updateNotes(){
+  checkWarranty();
   var aid = $('rAsset').value, f = fkey($('rFault').value), editId = $('rId').value;
   var c = catById($('rCat').value), veh = isVeh(c), a = assetById(aid);
   var assetRecs = aid ? records.filter(function(r){ return r.assetId === aid && r.id !== editId; }) : [];
@@ -594,15 +656,16 @@ $('rOdo') && $('rOdo').addEventListener('input', onFaultInput);
 function addPartRow(p){
   p = p || {};
   var tr = document.createElement('tr');
-  tr.innerHTML = '<td><input class="pName" list="dlParts" placeholder="اسم القطعة" value="' + esc(p.name || '') + '"></td>' +
+  tr.innerHTML = '<td><input class="pName" list="dlParts" placeholder="اسم القطعة" value="' + esc(p.name || '') + '" oninput="onPartInput()"></td>' +
     '<td><input class="pQty" type="number" min="0" step="1" value="' + esc(p.qty || 1) + '" oninput="calcTotal()"></td>' +
     '<td><input class="pCost" type="number" min="0" step="0.01" placeholder="0" value="' + (p.cost ? esc(p.cost) : '') + '" oninput="calcTotal()"></td>' +
-    '<td><button class="icon-btn del" title="حذف" onclick="this.closest(\'tr\').remove();calcTotal()"><i class="fa-solid fa-xmark"></i></button></td>';
+    '<td><input class="pWar" type="number" min="0" step="1" placeholder="بدون" title="مدة ضمان القطعة بالشهور" value="' + (p.warrantyMonths ? esc(p.warrantyMonths) : '') + '"></td>' +
+    '<td><button class="icon-btn del" title="حذف" onclick="this.closest(\'tr\').remove();calcTotal();checkWarranty()"><i class="fa-solid fa-xmark"></i></button></td>';
   $('partsBody').appendChild(tr);
 }
 function collectParts(){
   return Array.prototype.map.call(document.querySelectorAll('#partsBody tr'), function(tr){
-    return { name: tr.querySelector('.pName').value.trim(), qty: n(tr.querySelector('.pQty').value) || 1, cost: n(tr.querySelector('.pCost').value) };
+    return { name: tr.querySelector('.pName').value.trim(), qty: n(tr.querySelector('.pQty').value) || 1, cost: n(tr.querySelector('.pCost').value), warrantyMonths: n(tr.querySelector('.pWar').value) };
   }).filter(function(p){ return p.name; });
 }
 function calcTotal(){
@@ -628,7 +691,8 @@ function saveRecord(){
   if (!id) { data.createdAt = data.updatedAt; data.createdBy = who(); }
   var btn = $('rSave'); btn.disabled = true;
   var ref = id ? db.collection('maint_records').doc(id) : db.collection('maint_records').doc();
-  (id ? ref.update(data) : ref.set(data)).then(function(){
+  if (formFiles.some(function(f){ return f.data === null && !f.id; })) { btn.disabled = false; return toast('انتظر حتى ينتهي تجهيز المرفقات', 'err'); }
+  (id ? ref.update(data) : ref.set(data)).then(function(){ return saveFiles(ref.id, a.id); }).then(function(){
     // تحديث السائق الافتراضي للسيارة إن لم يكن محدداً
     if (isVeh(c) && data.driver && !a.driver) db.collection('maint_assets').doc(a.id).update({ driver: data.driver }).catch(function(){});
     closeModal('recModal'); toast(id ? 'تم تعديل الصيانة ✓' : 'تم حفظ الصيانة ✓', 'ok');
@@ -637,7 +701,8 @@ function saveRecord(){
 function deleteRecord(id){
   var r = records.filter(function(x){ return x.id === id; })[0]; if (!r) return;
   if (!confirm('حذف صيانة "' + r.fault + '" لـ ' + r.assetName + ' بتاريخ ' + fmtDate(r.date) + '؟')) return;
-  db.collection('maint_records').doc(id).delete().then(function(){ toast('تم الحذف', 'ok'); closeModal('viewModal'); }).catch(function(e){ toast(e.message, 'err'); });
+  loadFiles(id).then(function(fs){ return Promise.all(fs.map(function(f){ return db.collection('maint_files').doc(f.id).delete(); })); }).catch(function(){})
+    .then(function(){ return db.collection('maint_records').doc(id).delete(); }).then(function(){ toast('تم الحذف', 'ok'); closeModal('viewModal'); }).catch(function(e){ toast(e.message, 'err'); });
 }
 function viewRecord(id){
   var r = records.filter(function(x){ return x.id === id; })[0]; if (!r) return;
@@ -649,7 +714,7 @@ function viewRecord(id){
     ['العطل', esc(r.fault)]
   ];
   if (veh) { rows.push(['السائق', esc(r.driver || '—')]); if (r.odometer) rows.push(['العداد', fmt(r.odometer) + ' كم']); }
-  rows.push(['قطع الغيار', (r.parts || []).length ? (r.parts || []).map(function(p){ return '<span class="chip">' + esc(p.name) + (n(p.qty) > 1 ? ' ×' + p.qty : '') + (p.cost ? ' · ' + fmt(p.cost) : '') + '</span>'; }).join(' ') : '—']);
+  rows.push(['قطع الغيار', (r.parts || []).length ? (r.parts || []).map(function(p){ return '<span class="chip">' + esc(p.name) + (n(p.qty) > 1 ? ' ×' + p.qty : '') + (p.cost ? ' · ' + fmt(p.cost) : '') + (warrantyEnd(r, p) ? ' · <i class="fa-solid fa-shield-halved" style="color:' + (warrantyEnd(r, p) >= today() ? '#2e7d32' : '#999') + '"></i> ضمان حتى ' + fmtDate(warrantyEnd(r, p)) : '') + '</span>'; }).join(' ') : '—']);
   rows.push(['الورشة', esc(r.workshop || '—')], [veh ? 'الميكانيكي' : 'الفني', esc(r.technician || '—')]);
   rows.push(['التكلفة', 'القطع ' + fmt(r.partsCost) + ' + الأجرة ' + fmt(r.labor) + ' = <b>' + fmt(r.total) + '</b>']);
   if (r.branch) rows.push(['الفرع', esc(r.branch)]);
@@ -660,6 +725,12 @@ function viewRecord(id){
   $('viewFoot').innerHTML = '<button class="btn btn-primary" onclick="closeModal(\'viewModal\');openRecord(\'' + r.id + '\')"><i class="fa-solid fa-pen"></i> تعديل</button>' +
     '<button class="btn btn-danger" onclick="deleteRecord(\'' + r.id + '\')"><i class="fa-solid fa-trash"></i> حذف</button>' +
     '<button class="btn btn-light" style="margin-right:auto" onclick="closeModal(\'viewModal\')">إغلاق</button>';
+  if (r.filesCount) {
+    $('viewBody').insertAdjacentHTML('beforeend', '<div class="section-t"><i class="fa-solid fa-paperclip"></i> المرفقات</div><div class="files" id="viewFiles"><i class="fa-solid fa-spinner fa-spin muted"></i></div>');
+    loadFiles(r.id).then(function(fs){ window._viewFiles = fs; var el = $('viewFiles'); if (!el) return;
+      el.innerHTML = fs.map(function(f, i){ return '<div class="file" title="' + esc(f.name) + '" onclick="openFileData(_viewFiles[' + i + '])">' + (String(f.type).indexOf('image/') === 0 ? '<img src="' + f.data + '" alt="">' : '<div class="pdf"><i class="fa-solid fa-file-pdf"></i>' + esc(f.name) + '</div>') + '</div>'; }).join('') || '<span class="muted">لا توجد مرفقات</span>';
+    });
+  }
   openModal('viewModal');
 }
 
@@ -739,6 +810,199 @@ function deleteCategory(id){
   if (!confirm('حذف قسم "' + c.name + '"؟')) return;
   db.collection('maint_categories').doc(id).update({ active: false }).then(function(){ toast('تم الحذف', 'ok'); }).catch(function(e){ toast(e.message, 'err'); });
 }
+
+
+// ============================================================
+//  ضمان القطع
+// ============================================================
+function addMonths(d, m){ var x = new Date(d); x.setMonth(x.getMonth() + n(m)); return x.toLocaleDateString('en-CA'); }
+function warrantyEnd(r, p){ return n(p.warrantyMonths) > 0 && r.date ? addMonths(r.date, p.warrantyMonths) : ''; }
+var _wTimer;
+function onPartInput(){ clearTimeout(_wTimer); _wTimer = setTimeout(checkWarranty, 250); }
+// تحذير: قطعة استُبدلت سابقاً لنفس الأصل وما زالت تحت الضمان
+function checkWarranty(){
+  var box = $('warrantyNote'); if (!box) return;
+  var aid = $('rAsset').value, editId = $('rId').value, date = $('rDate').value || today();
+  var names = collectParts().map(function(p){ return fkey(p.name); });
+  if (!aid || !names.length) { box.innerHTML = ''; return; }
+  var hits = [];
+  records.forEach(function(r){
+    if (r.assetId !== aid || r.id === editId || r.date > date) return;
+    (r.parts || []).forEach(function(p){
+      var end = warrantyEnd(r, p);
+      if (end && end >= date && names.indexOf(fkey(p.name)) !== -1) hits.push({ r: r, p: p, end: end });
+    });
+  });
+  box.innerHTML = hits.length ? '<div class="note warn" style="background:#fdecec;border-color:#f3b9b9;color:#8a1c1c;margin-top:.6rem"><i class="fa-solid fa-shield-halved"></i><div>' +
+    '<b>تنبيه ضمان:</b> ' + hits.map(function(h){
+      return 'القطعة <b>' + esc(h.p.name) + '</b> رُكّبت بتاريخ ' + fmtDate(h.r.date) + (h.r.workshop ? ' في ' + esc(h.r.workshop) : '') +
+        ' وما زالت <b>تحت الضمان حتى ' + fmtDate(h.end) + '</b>' + (n(h.p.cost) ? ' (تكلفتها وقتها ' + fmt(h.p.cost) + ')' : '');
+    }).join('<br>') + '<br>راجع الورشة لاستبدالها بالضمان قبل الدفع.</div></div>' : '';
+}
+
+// ============================================================
+//  المرفقات (صور الفاتورة) — مضغوطة داخل Firestore في maint_files
+// ============================================================
+var formFiles = [];   // {id?, name, type, data, size, removed}
+var MAX_FILE = 900 * 1024;
+function renderFormFiles(){
+  var html = formFiles.map(function(f, i){
+    if (f.removed) return '';
+    var inner = f.type.indexOf('image/') === 0 && f.data ? '<img src="' + f.data + '" alt="">' :
+      f.data === null ? '<i class="fa-solid fa-spinner fa-spin muted"></i>' : '<div class="pdf"><i class="fa-solid fa-file-pdf"></i>' + esc(f.name) + '</div>';
+    return '<div class="file" title="' + esc(f.name) + '" onclick="openFileData(formFiles[' + i + '])">' + inner +
+      '<button class="rm" title="إزالة" onclick="event.stopPropagation();removeFormFile(' + i + ')">×</button></div>';
+  }).join('');
+  html += '<div class="file file-add" onclick="$(\'fileInput\').click()"><i class="fa-solid fa-camera"></i>إرفاق صورة</div>';
+  $('formFiles').innerHTML = html;
+}
+function removeFormFile(i){ if (formFiles[i].id) formFiles[i].removed = true; else formFiles.splice(i, 1); renderFormFiles(); }
+function onFilesPicked(input){
+  var files = Array.prototype.slice.call(input.files || []); input.value = '';
+  files.forEach(function(file){
+    var entry = { name: file.name, type: file.type || 'application/octet-stream', data: null, size: 0 };
+    formFiles.push(entry); renderFormFiles();
+    (file.type.indexOf('image/') === 0 ? compressImage(file) : readAsDataUrl(file)).then(function(res){
+      if (res.size > MAX_FILE) throw new Error('الملف "' + file.name + '" أكبر من 900 كيلوبايت');
+      entry.data = res.data; entry.size = res.size; entry.type = res.type || entry.type; renderFormFiles();
+    }).catch(function(e){ formFiles.splice(formFiles.indexOf(entry), 1); renderFormFiles(); toast(e.message || 'تعذّر قراءة الملف', 'err'); });
+  });
+}
+function readAsDataUrl(file){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){ res({ data: r.result, size: Math.round((r.result.length - r.result.indexOf(',') - 1) * 3 / 4), type: file.type }); };
+    r.onerror = function(){ rej(new Error('تعذّر قراءة الملف')); };
+    r.readAsDataURL(file);
+  });
+}
+// تصغير الصورة إلى 1600 بكسل كحد أقصى وضغطها JPEG حتى تكون أقل من 900 كيلوبايت
+function compressImage(file){
+  return readAsDataUrl(file).then(function(src){
+    return new Promise(function(res, rej){
+      var img = new Image();
+      img.onload = function(){
+        var max = 1600, w = img.naturalWidth, h = img.naturalHeight, s = Math.min(1, max / Math.max(w, h));
+        var cv = document.createElement('canvas'); cv.width = Math.round(w * s); cv.height = Math.round(h * s);
+        var g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+        var q = 0.75, data = cv.toDataURL('image/jpeg', q);
+        while (data.length * 0.75 > MAX_FILE && q > 0.35) { q -= 0.1; data = cv.toDataURL('image/jpeg', q); }
+        res({ data: data, size: Math.round(data.length * 0.75), type: 'image/jpeg' });
+      };
+      img.onerror = function(){ rej(new Error('تعذّر قراءة الصورة "' + file.name + '"')); };
+      img.src = src.data;
+    });
+  });
+}
+function openFileData(f){
+  if (!f || !f.data) return;
+  var parts = f.data.split(','), mime = (parts[0].match(/:(.*?);/) || [])[1] || f.type;
+  var bin = atob(parts[1]), arr = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  window.open(URL.createObjectURL(new Blob([arr], { type: mime })), '_blank');
+}
+function loadFiles(recordId){
+  return db.collection('maint_files').where('recordId', '==', recordId).get().then(function(s){
+    return s.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); }).sort(function(a, b){ return String(a.createdAt).localeCompare(String(b.createdAt)); });
+  });
+}
+function saveFiles(recordId, assetId){
+  var jobs = [];
+  formFiles.forEach(function(f){
+    if (f.id && f.removed) jobs.push(db.collection('maint_files').doc(f.id).delete());
+    else if (!f.id && f.data) jobs.push(db.collection('maint_files').add({ recordId: recordId, assetId: assetId, name: f.name, type: f.type, size: f.size, data: f.data, createdAt: new Date().toISOString(), createdBy: who() }));
+  });
+  var count = formFiles.filter(function(f){ return !f.removed && f.data !== undefined && (f.id || f.data); }).length;
+  return Promise.all(jobs).then(function(){ return db.collection('maint_records').doc(recordId).update({ filesCount: count }); });
+}
+
+// ============================================================
+//  التقارير والمقارنات
+// ============================================================
+function setRepRange(days){
+  $('repTo').value = days ? today() : '';
+  if (days) { var d = new Date(); d.setDate(d.getDate() - days); $('repFrom').value = d.toLocaleDateString('en-CA'); } else $('repFrom').value = '';
+  renderReports();
+}
+function repRecords(){
+  var cat = $('repCat').value, from = $('repFrom').value, to = $('repTo').value;
+  return records.filter(function(r){ return (!cat || r.category === cat) && (!from || r.date >= from) && (!to || r.date <= to); });
+}
+function groupBy(list, keyFn){ var m = {}; list.forEach(function(x){ var k = keyFn(x); if (!k) return; (m[k] = m[k] || []).push(x); }); return m; }
+function sum(list){ return list.reduce(function(s, r){ return s + n(r.total); }, 0); }
+function renderReports(){
+  var sel = $('repCat'), cur = sel.value;
+  sel.innerHTML = '<option value="">كل الأقسام</option>' + cats.map(function(c){ return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('');
+  sel.value = cur;
+  var rs = repRecords(), total = sum(rs);
+  var faultsG = groupBy(rs, function(r){ return fkey(r.fault); });
+  $('repStats').innerHTML =
+    stat('ui-i-blue', 'fa-list', rs.length, 'عدد الصيانات') +
+    stat('ui-i-green', 'fa-coins', fmt(total), 'إجمالي التكلفة') +
+    stat('ui-i-orange', 'fa-calculator', fmt(rs.length ? total / rs.length : 0), 'متوسط تكلفة الصيانة') +
+    stat('ui-i-purple', 'fa-gears', fmt(rs.reduce(function(s, r){ return s + n(r.partsCost); }, 0)), 'منها قطع غيار');
+
+  // التكلفة الشهرية — آخر 12 شهر (تتبع فلتر القسم فقط)
+  var cat = $('repCat').value, months = [];
+  for (var i = 11; i >= 0; i--) { var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i); months.push(d.toLocaleDateString('en-CA').substring(0, 7)); }
+  var mv = months.map(function(m){ return sum(records.filter(function(r){ return (!cat || r.category === cat) && String(r.date).substring(0, 7) === m; })); });
+  var mx = Math.max.apply(null, mv.concat([1]));
+  var MN = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  $('repMonths').innerHTML = months.map(function(m, i){
+    return '<div class="m" title="' + fmt(mv[i]) + '"><b>' + (mv[i] ? fmt(Math.round(mv[i])) : '') + '</b><div class="v" style="height:' + Math.max(2, Math.round(mv[i] / mx * 110)) + 'px"></div><small>' + MN[+m.substring(5) - 1] + '</small></div>';
+  }).join('');
+
+  // الأكثر تكلفة
+  var byAsset = groupBy(rs, function(r){ return r.assetId; });
+  var assetRows = Object.keys(byAsset).map(function(k){ return { name: byAsset[k][0].assetName, cnt: byAsset[k].length, total: sum(byAsset[k]) }; }).sort(function(a, b){ return b.total - a.total; }).slice(0, 10);
+  var amx = assetRows.length ? assetRows[0].total || 1 : 1;
+  $('repAssets').innerHTML = assetRows.length ? assetRows.map(function(a){
+    return '<tr><td><b>' + esc(a.name) + '</b></td><td class="num">' + a.cnt + '</td><td class="num">' + fmt(a.total) + '</td><td><div class="bar-wrap"><div class="bar" style="width:' + Math.round(a.total / amx * 100) + '%"></div></div></td></tr>';
+  }).join('') : emptyRow(4);
+
+  // الأعطال الأكثر تكراراً
+  var faultRows = Object.keys(faultsG).map(function(k){ var g = faultsG[k]; return { name: g[0].fault, cnt: g.length, assets: Object.keys(groupBy(g, function(r){ return r.assetId; })).length, total: sum(g) }; })
+    .sort(function(a, b){ return b.cnt - a.cnt || b.total - a.total; }).slice(0, 10);
+  $('repFaults').innerHTML = faultRows.length ? faultRows.map(function(f){
+    return '<tr><td>' + esc(f.name) + '</td><td class="num">' + f.cnt + '</td><td class="num">' + f.assets + '</td><td class="num">' + fmt(f.total) + '</td></tr>';
+  }).join('') : emptyRow(4);
+
+  // مقارنة الورش
+  var byShop = groupBy(rs, function(r){ return (r.workshop || '').trim(); });
+  var shopRows = Object.keys(byShop).map(function(k){
+    var g = byShop[k], fg = groupBy(g, function(r){ return fkey(r.fault); }), top = Object.keys(fg).sort(function(a, b){ return fg[b].length - fg[a].length; })[0];
+    return { name: k, cnt: g.length, total: sum(g), avg: sum(g) / g.length, top: top ? fg[top][0].fault + ' (' + fg[top].length + ')' : '' };
+  }).sort(function(a, b){ return b.cnt - a.cnt; });
+  $('repShops').innerHTML = shopRows.length ? shopRows.map(function(s){
+    return '<tr><td><b>' + esc(s.name) + '</b></td><td class="num">' + s.cnt + '</td><td class="num">' + fmt(s.total) + '</td><td class="num">' + fmt(s.avg) + '</td><td>' + esc(s.top) + '</td></tr>';
+  }).join('') : emptyRow(5, 'لا توجد ورش مسجّلة في هذه الفترة');
+
+  // أي ورشة أرخص لنفس العطل
+  var cheap = '';
+  Object.keys(faultsG).forEach(function(k){
+    var g = faultsG[k].filter(function(r){ return (r.workshop || '').trim(); });
+    var sg = groupBy(g, function(r){ return r.workshop.trim(); }), shops = Object.keys(sg);
+    if (shops.length < 2) return;
+    var rows = shops.map(function(s){ return { shop: s, cnt: sg[s].length, avg: sum(sg[s]) / sg[s].length }; }).sort(function(a, b){ return a.avg - b.avg; });
+    rows.forEach(function(x, i){
+      cheap += '<tr class="' + (i === 0 ? 'best' : '') + '">' + (i === 0 ? '<td rowspan="' + rows.length + '" style="background:#fff"><b>' + esc(g[0].fault) + '</b></td>' : '') +
+        '<td>' + (i === 0 ? '<i class="fa-solid fa-trophy" style="color:#2e7d32"></i> ' : '') + esc(x.shop) + '</td><td class="num">' + x.cnt + '</td><td class="num">' + fmt(x.avg) + '</td>' +
+        '<td class="num">' + (i === 0 ? '<span class="ui-badge ui-b-green">الأرخص</span>' : '+' + fmt(x.avg - rows[0].avg) + ' <span class="muted">(' + Math.round((x.avg / (rows[0].avg || 1) - 1) * 100) + '%)</span>') + '</td></tr>';
+    });
+  });
+  $('repCheapest').innerHTML = cheap || emptyRow(5, 'لا توجد أعطال تمت في أكثر من ورشة بعد — تظهر المقارنة تلقائياً عند تكرار نفس العطل في ورش مختلفة');
+
+  // قطع تحت الضمان حالياً
+  var t = today(), wr = [];
+  records.forEach(function(r){ if (cat && r.category !== cat) return; (r.parts || []).forEach(function(p){ var end = warrantyEnd(r, p); if (end && end >= t) wr.push({ r: r, p: p, end: end }); }); });
+  wr.sort(function(a, b){ return a.end.localeCompare(b.end); });
+  $('repWarranty').innerHTML = wr.length ? wr.map(function(w){
+    var left = daysBetween(t, w.end);
+    return '<tr><td>' + esc(w.r.assetName) + '</td><td><b>' + esc(w.p.name) + '</b></td><td class="num">' + fmtDate(w.r.date) + '</td><td>' + esc(w.r.workshop || '—') + '</td><td class="num">' + fmtDate(w.end) + '</td>' +
+      '<td>' + (left <= 30 ? '<span class="ui-badge ui-b-orange">' + left + ' يوم</span>' : '<span class="ui-badge ui-b-green">' + (left >= 60 ? Math.round(left / 30) + ' شهر' : left + ' يوم') + '</span>') + '</td></tr>';
+  }).join('') : emptyRow(6, 'لا توجد قطع تحت الضمان — أضف مدة الضمان عند تسجيل القطعة');
+}
+function emptyRow(cols, msg){ return '<tr><td colspan="' + cols + '" class="empty">' + (msg || 'لا توجد بيانات في هذه الفترة') + '</td></tr>'; }
 
 // ── تصدير ────────────────────────────────────────────────
 function exportCsv(){
