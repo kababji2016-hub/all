@@ -406,7 +406,9 @@ C.guard('maint').then(function(p){
     refreshLists();
   }).catch(function(){});
   db.collection('maint_settings').doc('payments').onSnapshot(function(d){
-    payMethods = d.exists && Array.isArray(d.data().methods) ? d.data().methods : DEFAULT_PAYS.slice();
+    payMethods = d.exists && Array.isArray(d.data().methods) ? d.data().methods : [];
+    // تنظيف لمرة واحدة: حذف الأسماء الافتراضية القديمة إن كانت محفوظة
+    if (d.exists && !d.data().noDefaults) { payMethods = payMethods.filter(function(m){ return OLD_DEFAULT_PAYS.indexOf(m) < 0; }); savePayMethods(payMethods).catch(function(){}); }
     fillPaySelect(); if (view === 'settings') renderSettings();
   }, function(){ fillPaySelect(); });
   db.collection('maint_categories').onSnapshot(function(s){
@@ -815,10 +817,10 @@ function deleteAsset(id){
 }
 
 // ── طرق الدفع (يضيفها المستخدم بنفسه) ───────────────────
-var DEFAULT_PAYS = ['نقداً (كاش)', 'شبكة / مدى', 'تحويل بنكي', 'آجل (على الحساب)', 'من العهدة'];
-var payMethods = DEFAULT_PAYS.slice();
+var OLD_DEFAULT_PAYS = ['نقداً (كاش)', 'شبكة / مدى', 'تحويل بنكي', 'آجل (على الحساب)', 'من العهدة'];
+var payMethods = [];
 function savePayMethods(list){
-  return db.collection('maint_settings').doc('payments').set({ methods: list, updatedAt: new Date().toISOString(), updatedBy: who() })
+  return db.collection('maint_settings').doc('payments').set({ methods: list, noDefaults: true, updatedAt: new Date().toISOString(), updatedBy: who() })
     .catch(function(e){ toast('تعذّر الحفظ: ' + e.message, 'err'); throw e; });
 }
 function fillPaySelect(keep){
