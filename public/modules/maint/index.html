@@ -111,6 +111,17 @@
   .months .m .v{width:100%;background:var(--ui-accent);border-radius:5px 5px 0 0;min-height:2px}
   .months .m small{font-size:.66rem;color:var(--ui-text3);white-space:nowrap}
   .months .m b{font-size:.66rem;color:var(--ui-text2)}
+  /* ── الطباعة (صفحة التقارير) ── */
+  @media print{
+    @page{size:A4;margin:10mm}
+    body{background:#fff}
+    .sb,.ui-ph-actions,.filters .btn,.no-print,.toast{display:none!important}
+    .main{margin:0;padding:0}
+    .ui-card,.ui-stat,.ui-ph{box-shadow:none;border:1px solid #dde3ea;break-inside:avoid}
+    .ui-card-h,.bar,.months .m .v,.best,th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .filters select,.filters input{border:0;background:none;padding:0;min-width:0}
+    .rep-grid{grid-template-columns:1fr 1fr}
+  }
   @media(max-width:860px){ .rep-grid{grid-template-columns:1fr} }
   @media(max-width:860px){
     .sb{position:static;width:auto;min-height:0}
@@ -161,7 +172,7 @@
     </div>
     <div class="ui-card" id="recordsCard">
       <div class="ui-card-h"><span><i class="fa-solid fa-list"></i> سجل الصيانات <span id="recCount"></span></span>
-        <button class="btn btn-sm btn-light" onclick="exportCsv()"><i class="fa-solid fa-file-excel"></i> تصدير Excel</button></div>
+        <div style="display:flex;gap:.4rem"><button class="btn btn-sm btn-light" onclick="printRecords()"><i class="fa-solid fa-print"></i> طباعة</button><button class="btn btn-sm btn-light" onclick="exportCsv()"><i class="fa-solid fa-file-excel"></i> تصدير Excel</button></div></div>
       <div class="filters">
         <input id="fSearch" placeholder="بحث: عطل، قطعة، ورشة، فني..." oninput="renderRecords()">
         <select id="fAsset" onchange="renderRecords()"></select>
@@ -186,6 +197,7 @@
       <button class="btn btn-sm btn-light" onclick="setRepRange(90)">آخر 3 شهور</button>
       <button class="btn btn-sm btn-light" onclick="setRepRange(365)">آخر سنة</button>
       <button class="btn btn-sm btn-light" onclick="setRepRange(0)">الكل</button>
+      <button class="btn btn-sm btn-primary" style="margin-right:auto" onclick="printReports()"><i class="fa-solid fa-print"></i> طباعة التقارير</button>
     </div></div>
     <div class="ui-stats" id="repStats"></div>
     <div class="ui-card">
@@ -369,6 +381,7 @@ function fillDatalist(id, list){ $(id).innerHTML = list.map(function(v){ return 
 // ── التشغيل ───────────────────────────────────────────────
 C.guard('maint').then(function(p){
   profile = p; db = C.db;
+  db.collection('core_settings').doc('main').get().then(function(d){ ORG = (d.exists && d.data().orgName) || ''; }).catch(function(){});
   $('phDate').textContent = new Date().toLocaleDateString('ar-SA-u-nu-latn', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   if (window.AllShared) AllShared.branches.watch(function(names){ branches = names; fillBranchSelects(); });
   // أسماء الموظفين من نظام الرواتب كاقتراحات للسائقين
@@ -532,6 +545,7 @@ function renderRecords(){
       '<td>' + esc(r.fault) + (r.filesCount ? ' <i class="fa-solid fa-paperclip muted" title="' + r.filesCount + ' مرفق"></i>' : '') + '</td><td>' + (partsText(r) ? '<span class="muted" style="font-size:.8rem;color:var(--ui-text2)">' + esc(partsText(r)) + '</span>' : '—') + '</td>' +
       '<td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td>' +
       '<td class="acts"><button class="icon-btn" title="عرض" onclick="viewRecord(\'' + r.id + '\')"><i class="fa-solid fa-eye"></i></button>' +
+      '<button class="icon-btn" title="طباعة" onclick="printRecord(\'' + r.id + '\')"><i class="fa-solid fa-print"></i></button>' +
       '<button class="icon-btn" title="تعديل" onclick="openRecord(\'' + r.id + '\')"><i class="fa-solid fa-pen"></i></button>' +
       '<button class="icon-btn del" title="حذف" onclick="deleteRecord(\'' + r.id + '\')"><i class="fa-solid fa-trash"></i></button></td></tr>';
   }).join('') : '<tr><td colspan="' + cols + '" class="empty"><i class="fa-solid fa-magnifying-glass"></i>لا توجد صيانات مطابقة</td></tr>';
@@ -725,6 +739,7 @@ function viewRecord(id){
   rows.push(['أدخلها', esc(r.createdBy || '—') + (r.updatedBy && r.updatedBy !== r.createdBy ? ' <span class="muted">(عدّلها ' + esc(r.updatedBy) + ')</span>' : '')]);
   $('viewBody').innerHTML = '<dl class="kv">' + rows.map(function(x){ return '<dt>' + esc(x[0]) + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl>';
   $('viewFoot').innerHTML = '<button class="btn btn-primary" onclick="closeModal(\'viewModal\');openRecord(\'' + r.id + '\')"><i class="fa-solid fa-pen"></i> تعديل</button>' +
+    '<button class="btn btn-light" onclick="printRecord(\'' + r.id + '\')"><i class="fa-solid fa-print"></i> طباعة</button>' +
     '<button class="btn btn-danger" onclick="deleteRecord(\'' + r.id + '\')"><i class="fa-solid fa-trash"></i> حذف</button>' +
     '<button class="btn btn-light" style="margin-right:auto" onclick="closeModal(\'viewModal\')">إغلاق</button>';
   if (r.filesCount) {
@@ -1005,6 +1020,93 @@ function renderReports(){
   }).join('') : emptyRow(7, 'لا توجد قطع تحت الضمان — أضف مدة الضمان عند تسجيل القطعة');
 }
 function emptyRow(cols, msg){ return '<tr><td colspan="' + cols + '" class="empty">' + (msg || 'لا توجد بيانات في هذه الفترة') + '</td></tr>'; }
+
+
+// ============================================================
+//  الطباعة — نموذج صيانة / سجل الصيانات / التقارير
+// ============================================================
+var ORG = '';
+function printDoc(title, body){
+  var w = window.open('', '_blank');
+  if (!w) return toast('اسمح بالنوافذ المنبثقة للطباعة', 'err');
+  var css = '*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:#212529;direction:rtl;padding:18px 22px;font-size:12.5px}' +
+    '.ph{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0f2942;padding-bottom:10px;margin-bottom:14px}' +
+    '.ph img{height:46px}.ph .t{text-align:left}.ph h1{font-size:18px;color:#0f2942}.ph small{color:#777;font-size:11px}' +
+    '.org{font-size:13px;font-weight:700;color:#0f2942}' +
+    'h2{font-size:13px;background:#0f2942;color:#fff;padding:6px 10px;border-radius:5px;margin:14px 0 8px}' +
+    'table{width:100%;border-collapse:collapse}th,td{border:1px solid #cfd6df;padding:6px 8px;text-align:right;vertical-align:top}th{background:#f1f4f8;font-weight:700;font-size:11.5px}' +
+    '.info td{border:1px solid #cfd6df}.info td.k{background:#f8f9fa;color:#555;font-weight:700;width:16%;white-space:nowrap}' +
+    '.num{font-variant-numeric:tabular-nums;white-space:nowrap}.tot td{font-weight:700;background:#f8f9fa}.big{font-size:14px;color:#0f2942}' +
+    '.box{border:1px solid #cfd6df;border-radius:5px;padding:8px 10px;min-height:34px}' +
+    '.imgs{display:flex;flex-wrap:wrap;gap:10px}.imgs img{max-width:48%;max-height:420px;border:1px solid #cfd6df;border-radius:4px}' +
+    '.sign{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:34px}.sign div{border-top:1px solid #777;padding-top:6px;text-align:center;color:#555}' +
+    '.foot{margin-top:18px;color:#999;font-size:10.5px;text-align:center}.muted{color:#777}' +
+    '@page{size:A4;margin:12mm}@media print{body{padding:0}h2{-webkit-print-color-adjust:exact;print-color-adjust:exact}th,.info td.k,.tot td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+  var now = new Date().toLocaleString('ar-SA-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>' + esc(title) + '</title><style>' + css + '</style></head><body>' +
+    '<div class="ph"><div><img src="' + location.origin + '/brand/logo.png" alt=""><div class="org">' + esc(ORG || 'مؤسسة كبابجي') + '</div></div>' +
+    '<div class="t"><h1>' + esc(title) + '</h1><small>تاريخ الطباعة: ' + now + (who() ? ' — بواسطة: ' + esc(who()) : '') + '</small></div></div>' +
+    body + '<div class="foot">النظام الشامل — نظام الصيانة</div>' +
+    '<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>');
+  w.document.close();
+}
+
+// نموذج صيانة واحدة (مع صور الفاتورة إن وُجدت)
+function printRecord(id){
+  var r = records.filter(function(x){ return x.id === id; })[0]; if (!r) return;
+  var c = catById(r.category) || {}, veh = isVeh(c);
+  var info = [
+    ['القسم', c.name || ''], [c.asset || 'الأصل', r.assetName + (r.assetCode ? ' — ' + r.assetCode : '')],
+    ['تاريخ الصيانة', fmtDate(r.date)], ['الفرع', r.branch || '—']
+  ];
+  if (veh) info.push(['السائق', r.driver || '—'], ['عداد الكيلومترات', r.odometer ? fmt(r.odometer) + ' كم' : '—']);
+  info.push(['الورشة', r.workshop || '—'], [veh ? 'الميكانيكي' : 'الفني', r.technician || '—']);
+  var rows = '';
+  for (var i = 0; i < info.length; i += 2) {
+    rows += '<tr><td class="k">' + esc(info[i][0]) + '</td><td>' + esc(info[i][1]) + '</td>' +
+      (info[i + 1] ? '<td class="k">' + esc(info[i + 1][0]) + '</td><td>' + esc(info[i + 1][1]) + '</td>' : '<td class="k"></td><td></td>') + '</tr>';
+  }
+  var parts = (r.parts || []).filter(function(p){ return p.name; });
+  var partsHtml = parts.length ? '<table><thead><tr><th style="width:30px">#</th><th>القطعة</th><th>المورد</th><th>الكمية</th><th>التكلفة</th><th>الضمان حتى</th></tr></thead><tbody>' +
+    parts.map(function(p, i){ return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.name) + '</td><td>' + esc(p.supplier || '—') + '</td><td class="num">' + (p.qty || 1) + '</td><td class="num">' + fmt(p.cost) + '</td><td class="num">' + (warrantyEnd(r, p) ? fmtDate(warrantyEnd(r, p)) : '—') + '</td></tr>'; }).join('') +
+    '</tbody></table>' : '<div class="box muted">لا توجد قطع غيار</div>';
+  var body = '<h2>بيانات الصيانة</h2><table class="info">' + rows + '</table>' +
+    '<h2>العطل / نوع الصيانة</h2><div class="box">' + esc(r.fault) + '</div>' +
+    '<h2>قطع الغيار المستبدلة</h2>' + partsHtml +
+    '<h2>التكلفة</h2><table><tbody><tr><td class="k" style="background:#f8f9fa;font-weight:700;width:25%">قطع الغيار</td><td class="num">' + fmt(r.partsCost) + '</td><td style="background:#f8f9fa;font-weight:700;width:25%">أجرة اليد</td><td class="num">' + fmt(r.labor) + '</td></tr>' +
+    '<tr class="tot"><td>الإجمالي</td><td colspan="3" class="num big">' + fmt(r.total) + '</td></tr></tbody></table>' +
+    (r.nextDue || r.notes ? '<h2>ملاحظات</h2><div class="box">' + (r.nextDue ? '<b>الصيانة القادمة:</b> ' + fmtDate(r.nextDue) + (r.notes ? '<br>' : '') : '') + esc(r.notes || '').replace(/\n/g, '<br>') + '</div>' : '') +
+    '<div id="__imgs"></div>' +
+    '<div class="sign"><div>' + (veh ? 'السائق' : 'المستلم') + '</div><div>مسؤول الصيانة</div><div>المدير</div></div>';
+  var title = 'نموذج صيانة — ' + (c.name || '');
+  if (!r.filesCount) return printDoc(title, body);
+  loadFiles(r.id).then(function(fs){
+    var imgs = fs.filter(function(f){ return String(f.type).indexOf('image/') === 0; });
+    printDoc(title, body.replace('<div id="__imgs"></div>', imgs.length ? '<h2>صور الفاتورة</h2><div class="imgs">' + imgs.map(function(f){ return '<img src="' + f.data + '">'; }).join('') + '</div>' : ''));
+  }).catch(function(){ printDoc(title, body); });
+}
+
+// سجل الصيانات حسب الفلتر الحالي
+function printRecords(){
+  var c = catById(curCat), veh = isVeh(c), rows = filteredRecords();
+  if (!rows.length) return toast('لا توجد سجلات للطباعة', 'err');
+  var f = [], a = assetById($('fAsset').value);
+  if (a) f.push(c.asset + ': ' + a.name);
+  if ($('fFrom').value || $('fTo').value) f.push('الفترة: ' + ($('fFrom').value ? fmtDate($('fFrom').value) : 'البداية') + ' — ' + ($('fTo').value ? fmtDate($('fTo').value) : 'اليوم'));
+  if ($('fSearch').value.trim()) f.push('بحث: ' + $('fSearch').value.trim());
+  var total = rows.reduce(function(s, r){ return s + n(r.total); }, 0);
+  var body = '<div class="box" style="margin-bottom:10px">' + (f.length ? esc(f.join(' · ')) + ' · ' : '') + 'عدد الصيانات: <b>' + rows.length + '</b> · الإجمالي: <b>' + fmt(total) + '</b></div>' +
+    '<table><thead><tr><th>#</th><th>التاريخ</th><th>' + esc(c.asset || 'الأصل') + '</th>' + (veh ? '<th>السائق</th>' : '') + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th></tr></thead><tbody>' +
+    rows.map(function(r, i){
+      return '<tr><td>' + (i + 1) + '</td><td class="num">' + fmtDate(r.date) + '</td><td>' + esc(r.assetName) + (veh && r.odometer ? '<br><span class="muted">' + fmt(r.odometer) + ' كم</span>' : '') + '</td>' +
+        (veh ? '<td>' + esc(r.driver || '—') + '</td>' : '') + '<td>' + esc(r.fault) + '</td><td>' + esc(partsText(r) || '—') + '</td><td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td></tr>';
+    }).join('') +
+    '<tr class="tot"><td colspan="' + (veh ? 8 : 7) + '">الإجمالي</td><td class="num">' + fmt(total) + '</td></tr></tbody></table>';
+  printDoc('سجل ' + c.name, body);
+}
+
+// التقارير: طباعة الصفحة كما هي (القائمة والأزرار مخفية في الطباعة)
+function printReports(){ window.print(); }
 
 // ── تصدير ────────────────────────────────────────────────
 function exportCsv(){
