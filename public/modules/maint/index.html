@@ -225,6 +225,11 @@
         <button class="btn btn-sm btn-light" onclick="openCategory()"><i class="fa-solid fa-plus"></i> قسم جديد</button></div>
       <div class="tbl-wrap"><table><thead><tr><th>القسم</th><th>النوع</th><th>اسم الأصل</th><th>الأصول</th><th>الصيانات</th><th></th></tr></thead><tbody id="catBody"></tbody></table></div>
     </div>
+    <div class="ui-card" style="margin-top:1rem">
+      <div class="ui-card-h"><span><i class="fa-solid fa-money-bill-wave"></i> طرق الدفع</span>
+        <button class="btn btn-sm btn-light" onclick="addPayMethod()"><i class="fa-solid fa-plus"></i> طريقة جديدة</button></div>
+      <div class="tbl-wrap"><table><thead><tr><th>طريقة الدفع</th><th>الصيانات</th><th></th></tr></thead><tbody id="payBody"></tbody></table></div>
+    </div>
   </section>
 </main>
 
@@ -254,7 +259,7 @@
         <div class="f"><label>مكان الصيانة (الورشة)</label><input id="rWorkshop" list="dlWorkshops" placeholder="اسم الورشة / الشركة"></div>
         <div class="f"><label id="rTechLabel">الفني</label><input id="rTech" list="dlTechs" placeholder="اسم الصنايعي"></div>
         <div class="f"><label>أجرة اليد</label><input id="rLabor" type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal()"></div>
-        <div class="f"><label>طريقة الدفع</label><select id="rPay"><option value="">— اختر —</option><option>نقداً (كاش)</option><option>شبكة / مدى</option><option>تحويل بنكي</option><option>آجل (على الحساب)</option><option>من العهدة</option></select></div>
+        <div class="f"><label>طريقة الدفع</label><select id="rPay" onchange="onPayChange()"></select></div>
         <div class="f"><label>الفرع</label><select id="rBranch"></select></div>
         <div class="f"><label>الصيانة القادمة (اختياري)</label><input id="rNext" type="date"><div class="hint">تظهر في التنبيهات قبل موعدها بأسبوع</div></div>
         <div class="f"><label>&nbsp;</label><div class="total-box"><span>القطع: <b id="tParts">0</b></span><span>الإجمالي: <b id="tTotal" style="color:var(--ui-accent)">0</b></span></div></div>
@@ -400,6 +405,10 @@ C.guard('maint').then(function(p){
     employees = s.docs.map(function(d){ return d.data(); }).filter(function(e){ return e.name; }).map(function(e){ return e.name; });
     refreshLists();
   }).catch(function(){});
+  db.collection('maint_settings').doc('payments').onSnapshot(function(d){
+    payMethods = d.exists && Array.isArray(d.data().methods) ? d.data().methods : DEFAULT_PAYS.slice();
+    fillPaySelect(); if (view === 'settings') renderSettings();
+  }, function(){ fillPaySelect(); });
   db.collection('maint_categories').onSnapshot(function(s){
     if (s.empty) { seedCategories(); return; }
     cats = s.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); }).filter(function(c){ return c.active !== false; })
@@ -464,7 +473,7 @@ function render(){
   if (view === 'dash') { setHeader('fa-gauge-high', 'لوحة الصيانة', 'كل أقسام الصيانة في مكان واحد'); renderDash(); }
   else if (view === 'cat') { setHeader(c.icon, c.name, 'السجل الكامل لكل ' + (c.asset || 'أصل') + ' وتاريخ أعطاله'); renderCat(); }
   else if (view === 'reports') { setHeader('fa-chart-pie', 'التقارير والمقارنات', 'أكثر الأصول تكلفة، أكثر الأعطال تكراراً، أي ورشة أرخص، والقطع تحت الضمان'); renderReports(); }
-  else { setHeader('fa-sliders', 'أقسام الصيانة', 'أضف أي قسم صيانة جديد وسيظهر في القائمة فوراً'); renderSettings(); }
+  else { setHeader('fa-sliders', 'الإعدادات', 'أقسام الصيانة وطرق الدفع'); renderSettings(); }
 }
 function setHeader(icon, title, sub){ $('phIcon').className = 'fa-solid ' + (icon || 'fa-screwdriver-wrench'); $('phTitle').textContent = title; $('phSub').textContent = sub; }
 
@@ -595,8 +604,7 @@ function openRecord(id, assetId){
   $('rWorkshop').value = r ? (r.workshop || '') : '';
   $('rTech').value = r ? (r.technician || '') : '';
   $('rLabor').value = r && r.labor ? r.labor : '';
-  if (r && r.payment) ensureOption('rPay', r.payment);
-  $('rPay').value = r ? (r.payment || '') : '';
+  fillPaySelect(r ? (r.payment || '') : '');
   if (r && r.branch) ensureOption('rBranch', r.branch);
   $('rBranch').value = r ? (r.branch || '') : '';
   $('rNext').value = r ? (r.nextDue || '') : '';
@@ -714,7 +722,7 @@ function saveRecord(){
     date: $('rDate').value, fault: $('rFault').value.trim(), parts: parts,
     workshop: $('rWorkshop').value.trim(), technician: $('rTech').value.trim(),
     driver: $('rDriver').value.trim(), odometer: n($('rOdo').value),
-    partsCost: partsCost, labor: labor, total: partsCost + labor, payment: $('rPay').value,
+    partsCost: partsCost, labor: labor, total: partsCost + labor, payment: $('rPay').value === '__new' ? '' : $('rPay').value,
     branch: $('rBranch').value, nextDue: $('rNext').value || '', notes: $('rNotes').value.trim(),
     updatedAt: new Date().toISOString(), updatedBy: who()
   };
@@ -806,9 +814,66 @@ function deleteAsset(id){
   db.collection('maint_assets').doc(id).update({ active: false }).then(function(){ toast('تم الحذف', 'ok'); }).catch(function(e){ toast(e.message, 'err'); });
 }
 
+// ── طرق الدفع (يضيفها المستخدم بنفسه) ───────────────────
+var DEFAULT_PAYS = ['نقداً (كاش)', 'شبكة / مدى', 'تحويل بنكي', 'آجل (على الحساب)', 'من العهدة'];
+var payMethods = DEFAULT_PAYS.slice();
+function savePayMethods(list){
+  return db.collection('maint_settings').doc('payments').set({ methods: list, updatedAt: new Date().toISOString(), updatedBy: who() })
+    .catch(function(e){ toast('تعذّر الحفظ: ' + e.message, 'err'); throw e; });
+}
+function fillPaySelect(keep){
+  var el = $('rPay'); if (!el) return;
+  var v = keep !== undefined ? keep : el.value;
+  el.innerHTML = '<option value="">— اختر —</option>' + payMethods.map(function(m){ return '<option>' + esc(m) + '</option>'; }).join('') +
+    '<option value="__new">＋ إضافة طريقة دفع جديدة...</option>';
+  if (v && v !== '__new') ensureOption('rPay', v);
+  el.value = v === '__new' ? '' : (v || '');
+}
+function askPayName(old){
+  var name = (prompt(old ? 'تعديل اسم طريقة الدفع:' : 'اسم طريقة الدفع الجديدة:', old || '') || '').trim();
+  if (!name || name === old) return null;
+  if (payMethods.some(function(m){ return m === name; })) { toast('طريقة الدفع "' + name + '" موجودة', 'err'); return null; }
+  return name;
+}
+function onPayChange(){
+  if ($('rPay').value !== '__new') return;
+  var name = askPayName();
+  if (!name) { $('rPay').value = ''; return; }
+  payMethods = payMethods.concat([name]); fillPaySelect(name);
+  savePayMethods(payMethods).then(function(){ toast('تمت إضافة "' + name + '" ✓', 'ok'); });
+}
+function addPayMethod(){
+  var name = askPayName(); if (!name) return;
+  savePayMethods(payMethods.concat([name])).then(function(){ toast('تمت الإضافة ✓', 'ok'); });
+}
+function renamePayMethod(i){
+  var old = payMethods[i], name = askPayName(old); if (!name) return;
+  var list = payMethods.slice(); list[i] = name;
+  var used = records.filter(function(r){ return r.payment === old; });
+  savePayMethods(list).then(function(){
+    // تحديث الصيانات المسجّلة بالاسم القديم
+    var b = db.batch(); used.forEach(function(r){ b.update(db.collection('maint_records').doc(r.id), { payment: name }); });
+    return used.length ? b.commit() : null;
+  }).then(function(){ toast('تم التعديل ✓', 'ok'); }).catch(function(){});
+}
+function deletePayMethod(i){
+  var m = payMethods[i], cnt = records.filter(function(r){ return r.payment === m; }).length;
+  if (!confirm('حذف طريقة الدفع "' + m + '"؟' + (cnt ? '\n(الصيانات السابقة المسجّلة بها (' + cnt + ') تبقى كما هي)' : ''))) return;
+  savePayMethods(payMethods.filter(function(x, k){ return k !== i; })).then(function(){ toast('تم الحذف', 'ok'); });
+}
+function renderPayments(){
+  if (!$('payBody')) return;
+  $('payBody').innerHTML = payMethods.length ? payMethods.map(function(m, i){
+    return '<tr><td><b>' + esc(m) + '</b></td><td class="num">' + records.filter(function(r){ return r.payment === m; }).length + '</td>' +
+      '<td class="acts"><button class="icon-btn" title="تعديل" onclick="renamePayMethod(' + i + ')"><i class="fa-solid fa-pen"></i></button>' +
+      '<button class="icon-btn del" title="حذف" onclick="deletePayMethod(' + i + ')"><i class="fa-solid fa-trash"></i></button></td></tr>';
+  }).join('') : '<tr><td colspan="3" class="muted" style="text-align:center">لا توجد طرق دفع — أضف طريقة جديدة</td></tr>';
+}
+
 // ── أقسام الصيانة ────────────────────────────────────────
 var _icon = 'fa-screwdriver-wrench';
 function renderSettings(){
+  renderPayments();
   $('catBody').innerHTML = cats.map(function(c){
     return '<tr><td><i class="fa-solid ' + esc(c.icon) + '" style="color:var(--ui-accent);width:20px"></i> <b>' + esc(c.name) + '</b></td>' +
       '<td>' + (isVeh(c) ? '<span class="ui-badge ui-b-blue">مركبات</span>' : '<span class="ui-badge ui-b-gray">عام</span>') + '</td><td>' + esc(c.asset || '—') + '</td>' +
