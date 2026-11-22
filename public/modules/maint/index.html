@@ -246,7 +246,7 @@
       </div>
 
       <div class="section-t"><i class="fa-solid fa-gears"></i> قطع الغيار المستبدلة</div>
-      <table class="parts"><thead><tr><th style="width:30%">القطعة</th><th style="width:26%">المورد (الشركة)</th><th style="width:10%">الكمية</th><th style="width:15%">التكلفة</th><th style="width:14%">الضمان (شهور)</th><th></th></tr></thead><tbody id="partsBody"></tbody></table>
+      <table class="parts"><thead><tr><th style="width:25%">القطعة</th><th style="width:21%">المورد (الشركة)</th><th style="width:14%">رقم الفاتورة</th><th style="width:9%">الكمية</th><th style="width:13%">التكلفة</th><th style="width:12%">الضمان (شهور)</th><th></th></tr></thead><tbody id="partsBody"></tbody></table>
       <button class="btn btn-sm btn-light" style="margin-top:.5rem" onclick="addPartRow()"><i class="fa-solid fa-plus"></i> إضافة قطعة</button>
       <div id="warrantyNote"></div>
 
@@ -530,7 +530,7 @@ function filteredRecords(){
     if (aid && r.assetId !== aid) return false;
     if (from && r.date < from) return false;
     if (to && r.date > to) return false;
-    if (q) { var hay = norm([r.assetName, r.fault, r.workshop, r.technician, r.driver, r.notes, partsText(r), (r.parts || []).map(function(p){ return p.supplier; }).join(' ')].join(' ')); if (hay.indexOf(q) === -1) return false; }
+    if (q) { var hay = norm([r.assetName, r.fault, r.workshop, r.technician, r.driver, r.notes, partsText(r), (r.parts || []).map(function(p){ return (p.supplier || '') + ' ' + (p.invoice || ''); }).join(' ')].join(' ')); if (hay.indexOf(q) === -1) return false; }
     return true;
   });
 }
@@ -673,6 +673,7 @@ function addPartRow(p){
   var tr = document.createElement('tr');
   tr.innerHTML = '<td><input class="pName" list="dlParts" placeholder="اسم القطعة" value="' + esc(p.name || '') + '" oninput="onPartInput()"></td>' +
     '<td><input class="pSup" list="dlSuppliers" placeholder="اشتُريت من..." value="' + esc(p.supplier || '') + '"></td>' +
+    '<td><input class="pInv" placeholder="رقم الفاتورة" value="' + esc(p.invoice || '') + '"></td>' +
     '<td><input class="pQty" type="number" min="0" step="1" value="' + esc(p.qty || 1) + '" oninput="calcTotal()"></td>' +
     '<td><input class="pCost" type="number" min="0" step="0.01" placeholder="0" value="' + (p.cost ? esc(p.cost) : '') + '" oninput="calcTotal()"></td>' +
     '<td><input class="pWar" type="number" min="0" step="1" placeholder="بدون" title="مدة ضمان القطعة بالشهور" value="' + (p.warrantyMonths ? esc(p.warrantyMonths) : '') + '"></td>' +
@@ -681,7 +682,7 @@ function addPartRow(p){
 }
 function collectParts(){
   return Array.prototype.map.call(document.querySelectorAll('#partsBody tr'), function(tr){
-    return { name: tr.querySelector('.pName').value.trim(), supplier: tr.querySelector('.pSup').value.trim(), qty: n(tr.querySelector('.pQty').value) || 1, cost: n(tr.querySelector('.pCost').value), warrantyMonths: n(tr.querySelector('.pWar').value) };
+    return { name: tr.querySelector('.pName').value.trim(), supplier: tr.querySelector('.pSup').value.trim(), invoice: tr.querySelector('.pInv').value.trim(), qty: n(tr.querySelector('.pQty').value) || 1, cost: n(tr.querySelector('.pCost').value), warrantyMonths: n(tr.querySelector('.pWar').value) };
   }).filter(function(p){ return p.name; });
 }
 function calcTotal(){
@@ -730,7 +731,7 @@ function viewRecord(id){
     ['العطل', esc(r.fault)]
   ];
   if (veh) { rows.push(['السائق', esc(r.driver || '—')]); if (r.odometer) rows.push(['العداد', fmt(r.odometer) + ' كم']); }
-  rows.push(['قطع الغيار', (r.parts || []).length ? (r.parts || []).map(function(p){ return '<span class="chip">' + esc(p.name) + (n(p.qty) > 1 ? ' ×' + p.qty : '') + (p.supplier ? ' · <i class="fa-solid fa-store" style="opacity:.6"></i> ' + esc(p.supplier) : '') + (p.cost ? ' · ' + fmt(p.cost) : '') + (warrantyEnd(r, p) ? ' · <i class="fa-solid fa-shield-halved" style="color:' + (warrantyEnd(r, p) >= today() ? '#2e7d32' : '#999') + '"></i> ضمان حتى ' + fmtDate(warrantyEnd(r, p)) : '') + '</span>'; }).join(' ') : '—']);
+  rows.push(['قطع الغيار', (r.parts || []).length ? (r.parts || []).map(function(p){ return '<span class="chip">' + esc(p.name) + (n(p.qty) > 1 ? ' ×' + p.qty : '') + (p.supplier ? ' · <i class="fa-solid fa-store" style="opacity:.6"></i> ' + esc(p.supplier) : '') + (p.invoice ? ' · <i class="fa-solid fa-receipt" style="opacity:.6"></i> فاتورة ' + esc(p.invoice) : '') + (p.cost ? ' · ' + fmt(p.cost) : '') + (warrantyEnd(r, p) ? ' · <i class="fa-solid fa-shield-halved" style="color:' + (warrantyEnd(r, p) >= today() ? '#2e7d32' : '#999') + '"></i> ضمان حتى ' + fmtDate(warrantyEnd(r, p)) : '') + '</span>'; }).join(' ') : '—']);
   rows.push(['الورشة', esc(r.workshop || '—')], [veh ? 'الميكانيكي' : 'الفني', esc(r.technician || '—')]);
   rows.push(['التكلفة', 'القطع ' + fmt(r.partsCost) + ' + الأجرة ' + fmt(r.labor) + ' = <b>' + fmt(r.total) + '</b>']);
   if (r.branch) rows.push(['الفرع', esc(r.branch)]);
@@ -852,7 +853,7 @@ function checkWarranty(){
   });
   box.innerHTML = hits.length ? '<div class="note warn" style="background:#fdecec;border-color:#f3b9b9;color:#8a1c1c;margin-top:.6rem"><i class="fa-solid fa-shield-halved"></i><div>' +
     '<b>تنبيه ضمان:</b> ' + hits.map(function(h){
-      return 'القطعة <b>' + esc(h.p.name) + '</b> رُكّبت بتاريخ ' + fmtDate(h.r.date) + (h.r.workshop ? ' في ' + esc(h.r.workshop) : '') + (h.p.supplier ? ' — اشتُريت من <b>' + esc(h.p.supplier) + '</b>' : '') +
+      return 'القطعة <b>' + esc(h.p.name) + '</b> رُكّبت بتاريخ ' + fmtDate(h.r.date) + (h.r.workshop ? ' في ' + esc(h.r.workshop) : '') + (h.p.supplier ? ' — اشتُريت من <b>' + esc(h.p.supplier) + '</b>' : '') + (h.p.invoice ? ' (فاتورة رقم <b>' + esc(h.p.invoice) + '</b>)' : '') +
         ' وما زالت <b>تحت الضمان حتى ' + fmtDate(h.end) + '</b>' + (n(h.p.cost) ? ' (تكلفتها وقتها ' + fmt(h.p.cost) + ')' : '');
     }).join('<br>') + '<br>راجع الورشة لاستبدالها بالضمان قبل الدفع.</div></div>' : '';
 }
@@ -1015,7 +1016,7 @@ function renderReports(){
   wr.sort(function(a, b){ return a.end.localeCompare(b.end); });
   $('repWarranty').innerHTML = wr.length ? wr.map(function(w){
     var left = daysBetween(t, w.end);
-    return '<tr><td>' + esc(w.r.assetName) + '</td><td><b>' + esc(w.p.name) + '</b></td><td>' + esc(w.p.supplier || '—') + '</td><td class="num">' + fmtDate(w.r.date) + '</td><td>' + esc(w.r.workshop || '—') + '</td><td class="num">' + fmtDate(w.end) + '</td>' +
+    return '<tr><td>' + esc(w.r.assetName) + '</td><td><b>' + esc(w.p.name) + '</b></td><td>' + esc(w.p.supplier || '—') + (w.p.invoice ? '<div class="muted">فاتورة ' + esc(w.p.invoice) + '</div>' : '') + '</td><td class="num">' + fmtDate(w.r.date) + '</td><td>' + esc(w.r.workshop || '—') + '</td><td class="num">' + fmtDate(w.end) + '</td>' +
       '<td>' + (left <= 30 ? '<span class="ui-badge ui-b-orange">' + left + ' يوم</span>' : '<span class="ui-badge ui-b-green">' + (left >= 60 ? Math.round(left / 30) + ' شهر' : left + ' يوم') + '</span>') + '</td></tr>';
   }).join('') : emptyRow(7, 'لا توجد قطع تحت الضمان — أضف مدة الضمان عند تسجيل القطعة');
 }
@@ -1067,8 +1068,8 @@ function printRecord(id){
       (info[i + 1] ? '<td class="k">' + esc(info[i + 1][0]) + '</td><td>' + esc(info[i + 1][1]) + '</td>' : '<td class="k"></td><td></td>') + '</tr>';
   }
   var parts = (r.parts || []).filter(function(p){ return p.name; });
-  var partsHtml = parts.length ? '<table><thead><tr><th style="width:30px">#</th><th>القطعة</th><th>المورد</th><th>الكمية</th><th>التكلفة</th><th>الضمان حتى</th></tr></thead><tbody>' +
-    parts.map(function(p, i){ return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.name) + '</td><td>' + esc(p.supplier || '—') + '</td><td class="num">' + (p.qty || 1) + '</td><td class="num">' + fmt(p.cost) + '</td><td class="num">' + (warrantyEnd(r, p) ? fmtDate(warrantyEnd(r, p)) : '—') + '</td></tr>'; }).join('') +
+  var partsHtml = parts.length ? '<table><thead><tr><th style="width:30px">#</th><th>القطعة</th><th>المورد</th><th>رقم الفاتورة</th><th>الكمية</th><th>التكلفة</th><th>الضمان حتى</th></tr></thead><tbody>' +
+    parts.map(function(p, i){ return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.name) + '</td><td>' + esc(p.supplier || '—') + '</td><td class="num">' + esc(p.invoice || '—') + '</td><td class="num">' + (p.qty || 1) + '</td><td class="num">' + fmt(p.cost) + '</td><td class="num">' + (warrantyEnd(r, p) ? fmtDate(warrantyEnd(r, p)) : '—') + '</td></tr>'; }).join('') +
     '</tbody></table>' : '<div class="box muted">لا توجد قطع غيار</div>';
   var body = '<h2>بيانات الصيانة</h2><table class="info">' + rows + '</table>' +
     '<h2>العطل / نوع الصيانة</h2><div class="box">' + esc(r.fault) + '</div>' +
@@ -1113,9 +1114,9 @@ function exportCsv(){
   var c = catById(curCat), veh = isVeh(c), rows = filteredRecords();
   if (!rows.length) return toast('لا توجد سجلات للتصدير', 'err');
   var q = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-  var head = ['التاريخ', c.asset || 'الأصل', veh ? 'رقم اللوحة' : 'الرقم'].concat(veh ? ['السائق', 'العداد'] : [], ['العطل', 'قطع الغيار', 'موردو القطع', 'الورشة', 'الفني', 'تكلفة القطع', 'الأجرة', 'الإجمالي', 'الفرع', 'الصيانة القادمة', 'ملاحظات']);
+  var head = ['التاريخ', c.asset || 'الأصل', veh ? 'رقم اللوحة' : 'الرقم'].concat(veh ? ['السائق', 'العداد'] : [], ['العطل', 'قطع الغيار', 'موردو القطع', 'أرقام الفواتير', 'الورشة', 'الفني', 'تكلفة القطع', 'الأجرة', 'الإجمالي', 'الفرع', 'الصيانة القادمة', 'ملاحظات']);
   var lines = rows.map(function(r){
-    return [r.date, r.assetName, r.assetCode].concat(veh ? [r.driver, r.odometer || ''] : [], [r.fault, partsText(r), uniq((r.parts || []).map(function(p){ return p.supplier; })).join('، '), r.workshop, r.technician, r.partsCost, r.labor, r.total, r.branch, r.nextDue, r.notes]).map(q).join(',');
+    return [r.date, r.assetName, r.assetCode].concat(veh ? [r.driver, r.odometer || ''] : [], [r.fault, partsText(r), uniq((r.parts || []).map(function(p){ return p.supplier; })).join('، '), uniq((r.parts || []).map(function(p){ return p.invoice; })).join('، '), r.workshop, r.technician, r.partsCost, r.labor, r.total, r.branch, r.nextDue, r.notes]).map(q).join(',');
   });
   var csv = '﻿' + head.map(q).join(',') + '\n' + lines.join('\n');
   var a = document.createElement('a');
