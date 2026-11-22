@@ -11,7 +11,8 @@
       { "source": "/finance", "destination": "/modules/finance/index.html" },
       { "source": "/payroll", "destination": "/modules/payroll/index.html" },
       { "source": "/docs", "destination": "/modules/docs/index.html" },
-      { "source": "/journal", "destination": "/modules/journal/index.html" }
+      { "source": "/journal", "destination": "/modules/journal/index.html" },
+      { "source": "/maint", "destination": "/modules/maint/index.html" }
     ],
     "headers": [
       { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },

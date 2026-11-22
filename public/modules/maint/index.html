@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام الصيانة</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="/core/firebase-config.js"></script>
+<script src="/core/modules.js"></script>
+<script src="/core/core.js"></script>
+<script src="/core/shared.js"></script>
+<link rel="stylesheet" href="/core/ui.css">
+<script src="/core/ui.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--ui-font);font-size:14px;font-weight:600;background:var(--ui-bg);color:var(--ui-text);direction:rtl}
+  button,input,select,textarea{font-family:inherit}
+  .hidden{display:none!important}
+  /* ── الشريط الجانبي ── */
+  .sb{width:235px;min-height:100vh;background:var(--ui-primary);position:fixed;right:0;top:0;z-index:200;display:flex;flex-direction:column}
+  .sb-nav{padding-top:.4rem;display:flex;flex-direction:column;flex:1;overflow-y:auto}
+  .nav-link{display:flex;align-items:center;gap:.7rem;width:100%;padding:.62rem 1.4rem;border:0;background:none;color:var(--ui-sb-text);font-size:.86rem;font-weight:600;cursor:pointer;text-align:right;transition:background .15s,color .15s}
+  .nav-link i{width:18px;text-align:center}
+  .nav-link:hover,.nav-link.active{background:var(--ui-sb-active);color:#fff}
+  .nav-count{margin-right:auto;font-size:.7rem;background:rgba(255,255,255,.12);border-radius:10px;padding:0 .45rem;line-height:1.6}
+  /* ── المحتوى ── */
+  .main{margin-right:235px;padding:1.4rem}
+  .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem 1rem;border-radius:8px;border:1px solid transparent;font-size:.84rem;font-weight:700;cursor:pointer;white-space:nowrap}
+  .btn-primary{background:var(--ui-accent);color:#fff}.btn-primary:hover{background:#1565c0}
+  .btn-light{background:var(--ui-surface2);border-color:var(--ui-border);color:var(--ui-text)}.btn-light:hover{background:#eef1f5}
+  .btn-danger{background:#fdecec;color:#c62828}.btn-danger:hover{background:#c62828;color:#fff}
+  .btn-sm{padding:.3rem .6rem;font-size:.76rem}
+  .icon-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--ui-border);background:#fff;color:var(--ui-text2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .icon-btn:hover{background:var(--ui-surface2)}
+  .icon-btn.del:hover{color:#c62828;border-color:#f3b9b9}
+  .tabs{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap}
+  .tab{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--ui-border);background:#fff;color:var(--ui-text2);font-size:.84rem;font-weight:700;cursor:pointer}
+  .tab.active{background:var(--ui-primary);border-color:var(--ui-primary);color:#fff}
+  .filters{display:flex;gap:.5rem;flex-wrap:wrap;padding:.7rem 1.2rem;background:var(--ui-surface2);border-bottom:1px solid var(--ui-border)}
+  .filters input,.filters select{padding:.42rem .7rem;border:1px solid var(--ui-border);border-radius:8px;background:#fff;font-size:.82rem;min-width:150px;outline:none}
+  .filters input:focus,.filters select:focus{border-color:var(--ui-accent)}
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse}
+  th{background:#f8f9fa;color:var(--ui-text);font-size:.79rem;font-weight:700;text-align:right;padding:.6rem .8rem;border-bottom:1px solid var(--ui-border);white-space:nowrap}
+  td{font-size:.84rem;padding:.6rem .8rem;border-bottom:1px solid var(--ui-border);vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  tbody tr:hover td{background:#fafbfc}
+  .muted{color:var(--ui-text3);font-size:.76rem}
+  .num{font-variant-numeric:tabular-nums;font-weight:700}
+  .empty{text-align:center;color:var(--ui-text3);padding:2.2rem 1rem}
+  .empty i{font-size:1.6rem;display:block;margin-bottom:.5rem;opacity:.5}
+  .acts{display:flex;gap:.3rem;justify-content:flex-end}
+  .chip{display:inline-block;padding:.1rem .5rem;border-radius:6px;background:#eef2f8;color:var(--ui-text2);font-size:.74rem;margin:1px}
+  /* ── النوافذ ── */
+  .modal{position:fixed;inset:0;background:rgba(10,20,40,.5);display:flex;align-items:flex-start;justify-content:center;padding:3vh 14px;z-index:900;overflow-y:auto}
+  .modal-box{background:#fff;border-radius:14px;width:100%;max-width:820px;box-shadow:0 30px 80px rgba(0,0,0,.3);overflow:hidden}
+  .modal-box.sm{max-width:520px}
+  .modal-h{background:var(--ui-primary);color:#fff;padding:.85rem 1.2rem;display:flex;align-items:center;justify-content:space-between;font-weight:700}
+  .modal-h button{border:0;background:rgba(255,255,255,.12);color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:1rem}
+  .modal-b{padding:1.1rem 1.2rem}
+  .modal-f{padding:.85rem 1.2rem;border-top:1px solid var(--ui-border);display:flex;gap:.5rem;align-items:center;background:var(--ui-surface2)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem}
+  .grid .span2{grid-column:span 2}.grid .span3{grid-column:1/-1}
+  .f label{display:block;font-size:.76rem;color:var(--ui-text2);margin-bottom:.3rem;font-weight:700}
+  .f label .req{color:#c62828}
+  .f input,.f select,.f textarea{width:100%;padding:.5rem .7rem;border:1px solid var(--ui-border);border-radius:8px;background:#fff;font-size:.86rem;outline:none;color:var(--ui-text)}
+  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--ui-accent);box-shadow:0 0 0 3px rgba(30,136,229,.1)}
+  .f textarea{min-height:60px;resize:vertical}
+  .hint{font-size:.72rem;color:var(--ui-text3);margin-top:.25rem}
+  .note{border-radius:10px;padding:.7rem .9rem;font-size:.82rem;line-height:1.8;display:flex;gap:.6rem}
+  .note i{margin-top:.3rem}
+  .note.warn{background:#fff8e1;border:1px solid #ffe08a;color:#7a5600}
+  .note.info{background:#e8f1fd;border:1px solid #c6dcf7;color:#174a85}
+  .note.ok{background:#e8f5e9;border:1px solid #c3e6c6;color:#1e5e24}
+  .parts th,.parts td{padding:.35rem .4rem;border-bottom:1px solid var(--ui-border)}
+  .parts input{width:100%;padding:.4rem .5rem;border:1px solid var(--ui-border);border-radius:6px;font-size:.84rem;outline:none}
+  .parts input:focus{border-color:var(--ui-accent)}
+  .total-box{display:flex;gap:1.2rem;flex-wrap:wrap;align-items:center;font-size:.84rem}
+  .total-box b{font-size:1.1rem}
+  .section-t{font-size:.84rem;font-weight:700;color:var(--ui-primary);margin:1rem 0 .5rem;display:flex;align-items:center;gap:.4rem}
+  .kv{display:grid;grid-template-columns:140px 1fr;gap:.45rem 1rem;font-size:.86rem}
+  .kv dt{color:var(--ui-text3);font-weight:700}
+  .icon-pick{display:flex;flex-wrap:wrap;gap:.35rem}
+  .icon-pick button{width:38px;height:38px;border-radius:8px;border:1px solid var(--ui-border);background:#fff;cursor:pointer;color:var(--ui-text2);font-size:1rem}
+  .icon-pick button.on{background:var(--ui-primary);color:#fff;border-color:var(--ui-primary)}
+  .toast{position:fixed;bottom:22px;left:22px;background:var(--ui-primary);color:#fff;padding:.7rem 1.1rem;border-radius:10px;font-size:.86rem;z-index:1000;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none}
+  .toast.show{opacity:1;transform:none}.toast.err{background:#c62828}.toast.ok{background:#2e7d32}
+  @media(max-width:860px){
+    .sb{position:static;width:auto;min-height:0}
+    .sb .ui-sb-brand{display:none}
+    .sb-nav{flex-direction:row;overflow-x:auto;padding:0}
+    .nav-link{white-space:nowrap;width:auto;padding:.65rem .9rem}
+    .main{margin-right:0;padding:.8rem}
+    .grid{grid-template-columns:1fr}.grid .span2,.grid .span3{grid-column:auto}
+    .kv{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<aside class="sb" data-all-sidebar>
+  <div class="ui-sb-brand"><i class="fa-solid fa-screwdriver-wrench"></i><div><h5>نظام الصيانة</h5><p>السيارات والمعدات والمكيفات</p></div></div>
+  <nav class="sb-nav" id="nav"></nav>
+</aside>
+
+<main class="main">
+  <header class="ui-ph">
+    <div class="ui-ph-title"><i class="fa-solid fa-screwdriver-wrench" id="phIcon"></i><div><h4 id="phTitle">لوحة الصيانة</h4><div class="ui-ph-sub" id="phSub"></div></div></div>
+    <div class="ui-ph-actions">
+      <span class="ui-ph-date" id="phDate"></span>
+      <button class="btn btn-primary" onclick="openRecord()"><i class="fa-solid fa-plus"></i> صيانة جديدة</button>
+    </div>
+  </header>
+
+  <!-- ===== لوحة الصيانة ===== -->
+  <section id="v-dash">
+    <div class="ui-stats" id="dashStats"></div>
+    <div class="ui-card">
+      <div class="ui-card-h"><span><i class="fa-solid fa-calendar-check"></i> صيانات قادمة ومتأخرة</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>الموعد</th><th>القسم</th><th>الأصل</th><th>العطل / الصيانة</th><th>الحالة</th><th></th></tr></thead><tbody id="dueBody"></tbody></table></div>
+    </div>
+    <div class="ui-card">
+      <div class="ui-card-h"><span><i class="fa-solid fa-clock-rotate-left"></i> آخر الصيانات</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>القسم</th><th>الأصل</th><th>العطل</th><th>الورشة</th><th>التكلفة</th><th></th></tr></thead><tbody id="recentBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===== قسم صيانة (سيارات / معدات / ...) ===== -->
+  <section id="v-cat" class="hidden">
+    <div class="ui-stats" id="catStats"></div>
+    <div class="tabs">
+      <button class="tab active" data-tab="records" onclick="setTab('records')"><i class="fa-solid fa-list"></i> سجل الصيانات</button>
+      <button class="tab" data-tab="assets" onclick="setTab('assets')"><i class="fa-solid fa-boxes-stacked"></i> <span id="assetsTabLabel">الأصول</span></button>
+    </div>
+    <div class="ui-card" id="recordsCard">
+      <div class="ui-card-h"><span><i class="fa-solid fa-list"></i> سجل الصيانات <span id="recCount"></span></span>
+        <button class="btn btn-sm btn-light" onclick="exportCsv()"><i class="fa-solid fa-file-excel"></i> تصدير Excel</button></div>
+      <div class="filters">
+        <input id="fSearch" placeholder="بحث: عطل، قطعة، ورشة، فني..." oninput="renderRecords()">
+        <select id="fAsset" onchange="renderRecords()"></select>
+        <input id="fFrom" type="date" onchange="renderRecords()" title="من تاريخ">
+        <input id="fTo" type="date" onchange="renderRecords()" title="إلى تاريخ">
+      </div>
+      <div class="tbl-wrap"><table><thead id="recHead"></thead><tbody id="recBody"></tbody></table></div>
+    </div>
+    <div class="ui-card hidden" id="assetsCard">
+      <div class="ui-card-h"><span><i class="fa-solid fa-boxes-stacked"></i> <span id="assetsTitle"></span></span>
+        <button class="btn btn-sm btn-light" onclick="openAsset()"><i class="fa-solid fa-plus"></i> <span id="addAssetLabel">إضافة</span></button></div>
+      <div class="tbl-wrap"><table><thead id="assetHead"></thead><tbody id="assetBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===== الإعدادات: أقسام الصيانة ===== -->
+  <section id="v-settings" class="hidden">
+    <div class="ui-card">
+      <div class="ui-card-h"><span><i class="fa-solid fa-layer-group"></i> أقسام الصيانة</span>
+        <button class="btn btn-sm btn-light" onclick="openCategory()"><i class="fa-solid fa-plus"></i> قسم جديد</button></div>
+      <div class="tbl-wrap"><table><thead><tr><th>القسم</th><th>النوع</th><th>اسم الأصل</th><th>الأصول</th><th>الصيانات</th><th></th></tr></thead><tbody id="catBody"></tbody></table></div>
+    </div>
+  </section>
+</main>
+
+<!-- ===== نافذة: صيانة جديدة / تعديل ===== -->
+<div class="modal hidden" id="recModal">
+  <div class="modal-box">
+    <div class="modal-h"><span id="recTitle">صيانة جديدة</span><button onclick="closeModal('recModal')">×</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="rId">
+      <div class="grid">
+        <div class="f"><label>القسم <span class="req">*</span></label><select id="rCat" onchange="onRecCatChange()"></select></div>
+        <div class="f span2"><label id="rAssetLabel">الأصل <span class="req">*</span></label><select id="rAsset" onchange="onRecAssetChange()"></select></div>
+        <div class="f veh"><label>السائق</label><input id="rDriver" list="dlDrivers" placeholder="اسم السائق"></div>
+        <div class="f veh"><label>عداد الكيلومترات</label><input id="rOdo" type="number" min="0" placeholder="مثال: 125000"><div class="hint" id="odoHint"></div></div>
+        <div class="f"><label>تاريخ الصيانة <span class="req">*</span></label><input id="rDate" type="date"></div>
+        <div class="f span3" id="assetNoteWrap"></div>
+        <div class="f span3"><label>العطل / نوع الصيانة <span class="req">*</span></label><input id="rFault" list="dlFaults" placeholder="مثال: تغيير زيت وفلتر، كفرات، تسريب ماء..." oninput="onFaultInput()"></div>
+        <div class="f span3" id="faultNoteWrap"></div>
+      </div>
+
+      <div class="section-t"><i class="fa-solid fa-gears"></i> قطع الغيار المستبدلة</div>
+      <table class="parts"><thead><tr><th style="width:55%">القطعة</th><th style="width:15%">الكمية</th><th style="width:20%">التكلفة</th><th></th></tr></thead><tbody id="partsBody"></tbody></table>
+      <button class="btn btn-sm btn-light" style="margin-top:.5rem" onclick="addPartRow()"><i class="fa-solid fa-plus"></i> إضافة قطعة</button>
+
+      <div class="grid" style="margin-top:1rem">
+        <div class="f"><label>مكان الصيانة (الورشة)</label><input id="rWorkshop" list="dlWorkshops" placeholder="اسم الورشة / الشركة"></div>
+        <div class="f"><label id="rTechLabel">الفني</label><input id="rTech" list="dlTechs" placeholder="اسم الصنايعي"></div>
+        <div class="f"><label>أجرة اليد</label><input id="rLabor" type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal()"></div>
+        <div class="f"><label>الفرع</label><select id="rBranch"></select></div>
+        <div class="f"><label>الصيانة القادمة (اختياري)</label><input id="rNext" type="date"><div class="hint">تظهر في التنبيهات قبل موعدها بأسبوع</div></div>
+        <div class="f"><label>&nbsp;</label><div class="total-box"><span>القطع: <b id="tParts">0</b></span><span>الإجمالي: <b id="tTotal" style="color:var(--ui-accent)">0</b></span></div></div>
+        <div class="f span3"><label>ملاحظات</label><textarea id="rNotes" placeholder="أي تفاصيل إضافية..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-primary" id="rSave" onclick="saveRecord()"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+      <button class="btn btn-light" onclick="closeModal('recModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== نافذة: عرض صيانة ===== -->
+<div class="modal hidden" id="viewModal">
+  <div class="modal-box sm">
+    <div class="modal-h"><span>تفاصيل الصيانة</span><button onclick="closeModal('viewModal')">×</button></div>
+    <div class="modal-b" id="viewBody"></div>
+    <div class="modal-f" id="viewFoot"></div>
+  </div>
+</div>
+
+<!-- ===== نافذة: أصل (سيارة / معدة / مكيف) ===== -->
+<div class="modal hidden" id="assetModal">
+  <div class="modal-box sm">
+    <div class="modal-h"><span id="assetModalTitle">إضافة</span><button onclick="closeModal('assetModal')">×</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="aId">
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div class="f span3"><label id="aNameLabel">الاسم / النوع <span class="req">*</span></label><input id="aName" placeholder=""></div>
+        <div class="f"><label id="aCodeLabel">رقم اللوحة</label><input id="aCode"></div>
+        <div class="f"><label>الفرع</label><select id="aBranch"></select></div>
+        <div class="f veh-a"><label>السائق الافتراضي</label><input id="aDriver" list="dlDrivers"></div>
+        <div class="f veh-a"><label>سنة الصنع</label><input id="aYear" type="number" min="1980" max="2100"></div>
+        <div class="f span3"><label>ملاحظات</label><textarea id="aNotes"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-primary" onclick="saveAsset()"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+      <button class="btn btn-light" onclick="closeModal('assetModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== نافذة: قسم صيانة ===== -->
+<div class="modal hidden" id="catModal">
+  <div class="modal-box sm">
+    <div class="modal-h"><span id="catModalTitle">قسم صيانة جديد</span><button onclick="closeModal('catModal')">×</button></div>
+    <div class="modal-b">
+      <input type="hidden" id="cId">
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div class="f span3"><label>اسم القسم <span class="req">*</span></label><input id="cName" placeholder="مثال: صيانة الثلاجات"></div>
+        <div class="f"><label>اسم الأصل (المفرد)</label><input id="cAsset" placeholder="مثال: الثلاجة"></div>
+        <div class="f"><label>النوع</label><select id="cKind"><option value="general">عام (معدات / أجهزة)</option><option value="vehicle">مركبات (فيها سائق وعداد كيلومترات)</option></select></div>
+        <div class="f span3"><label>الأيقونة</label><div class="icon-pick" id="cIcons"></div></div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-primary" onclick="saveCategory()"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+      <button class="btn btn-light" onclick="closeModal('catModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<datalist id="dlFaults"></datalist><datalist id="dlParts"></datalist><datalist id="dlWorkshops"></datalist>
+<datalist id="dlTechs"></datalist><datalist id="dlDrivers"></datalist>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ============================================================
+//  نظام الصيانة — جزء من النظام الشامل
+//  المجموعات: maint_categories (الأقسام) / maint_assets (السيارات والمعدات...) / maint_records (الصيانات)
+// ============================================================
+var C = window.AllCore, db, profile = null;
+var cats = [], assets = [], records = [], branches = [], employees = [];
+var view = 'dash', curCat = null, curTab = 'records';
+var ICONS = ['fa-car','fa-truck','fa-van-shuttle','fa-motorcycle','fa-gears','fa-screwdriver-wrench','fa-snowflake','fa-fan','fa-plug','fa-bolt','fa-faucet','fa-fire-burner','fa-blender','fa-temperature-low','fa-computer','fa-print','fa-building','fa-hammer'];
+var DEFAULT_CATS = [
+  { id: 'vehicles',  name: 'صيانة السيارات', asset: 'السيارة', kind: 'vehicle', icon: 'fa-car', order: 1 },
+  { id: 'equipment', name: 'صيانة المعدات',  asset: 'المعدة',  kind: 'general', icon: 'fa-gears', order: 2 },
+  { id: 'ac',        name: 'صيانة المكيفات', asset: 'المكيف',  kind: 'general', icon: 'fa-snowflake', order: 3 }
+];
+
+// ── أدوات ────────────────────────────────────────────────
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function n(v){ return +v || 0; }
+function fmt(v){ return n(v).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+function today(){ return new Date().toLocaleDateString('en-CA'); }
+function daysBetween(a, b){ return Math.round((new Date(b) - new Date(a)) / 86400000); }
+function fmtDate(d){ if (!d) return '—'; var p = String(d).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d; }
+function ago(d){
+  var x = daysBetween(d, today());
+  if (x === 0) return 'اليوم'; if (x === 1) return 'أمس';
+  if (x < 30) return 'منذ ' + x + ' يوم';
+  if (x < 365) return 'منذ ' + Math.round(x / 30) + ' شهر';
+  return 'منذ ' + (x / 365).toFixed(1).replace('.0', '') + ' سنة';
+}
+// توحيد كتابة العطل للمقارنة: المسافات والهمزات والتاء المربوطة والياء
+function norm(s){
+  return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ')
+    .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[ًٌٍَُِّْـ]/g, '');
+}
+// مفتاح مطابقة العطل: يتجاهل المسافات أيضاً ("زيت و فلتر" = "زيت وفلتر")
+function fkey(s){ return norm(s).replace(/\s+/g, ''); }
+// اسم الإشارة المناسب: هذه السيارة / هذا المكيف
+function thisWord(label){ return /ة$/.test(String(label || '').trim()) ? 'هذه' : 'هذا'; }
+var _tt;
+function toast(msg, type){ var t = $('toast'); t.textContent = msg; t.className = 'toast show ' + (type || ''); clearTimeout(_tt); _tt = setTimeout(function(){ t.className = 'toast'; }, 2600); }
+function closeModal(id){ $(id).classList.add('hidden'); }
+function openModal(id){ $(id).classList.remove('hidden'); }
+function catById(id){ return cats.filter(function(c){ return c.id === id; })[0] || null; }
+function assetById(id){ return assets.filter(function(a){ return a.id === id; })[0] || null; }
+function isVeh(cat){ return cat && cat.kind === 'vehicle'; }
+function who(){ return (profile && (profile.name || profile.username)) || ''; }
+function partsText(r){ return (r.parts || []).filter(function(p){ return p.name; }).map(function(p){ return p.name + (n(p.qty) > 1 ? ' ×' + p.qty : ''); }).join('، '); }
+function uniq(arr){ var s = {}, out = []; arr.forEach(function(v){ v = String(v || '').trim(); if (v && !s[norm(v)]) { s[norm(v)] = 1; out.push(v); } }); return out.sort(function(a, b){ return a.localeCompare(b, 'ar'); }); }
+function fillDatalist(id, list){ $(id).innerHTML = list.map(function(v){ return '<option value="' + esc(v) + '">'; }).join(''); }
+
+// ── التشغيل ───────────────────────────────────────────────
+C.guard('maint').then(function(p){
+  profile = p; db = C.db;
+  $('phDate').textContent = new Date().toLocaleDateString('ar-SA-u-nu-latn', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  if (window.AllShared) AllShared.branches.watch(function(names){ branches = names; fillBranchSelects(); });
+  // أسماء الموظفين من نظام الرواتب كاقتراحات للسائقين
+  if (C.canUse(p, 'payroll')) db.collection('payroll_employees').get().then(function(s){
+    employees = s.docs.map(function(d){ return d.data(); }).filter(function(e){ return e.name; }).map(function(e){ return e.name; });
+    refreshLists();
+  }).catch(function(){});
+  db.collection('maint_categories').onSnapshot(function(s){
+    if (s.empty) { seedCategories(); return; }
+    cats = s.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); }).filter(function(c){ return c.active !== false; })
+      .sort(function(a, b){ return n(a.order) - n(b.order) || String(a.name).localeCompare(String(b.name), 'ar'); });
+    renderNav(); render();
+  }, function(e){ toast('تعذّر تحميل الأقسام: ' + e.message, 'err'); });
+  db.collection('maint_assets').onSnapshot(function(s){
+    assets = s.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); }).filter(function(a){ return a.active !== false; })
+      .sort(function(a, b){ return String(a.name).localeCompare(String(b.name), 'ar'); });
+    refreshLists(); renderNav(); render();
+  });
+  db.collection('maint_records').onSnapshot(function(s){
+    records = s.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); })
+      .sort(function(a, b){ return String(b.date).localeCompare(String(a.date)) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')); });
+    refreshLists(); renderNav(); render();
+  });
+});
+
+function seedCategories(){
+  var b = db.batch();
+  DEFAULT_CATS.forEach(function(c){ b.set(db.collection('maint_categories').doc(c.id), Object.assign({ active: true, createdAt: new Date().toISOString() }, c)); });
+  b.commit().catch(function(e){ toast('تعذّر إنشاء الأقسام: ' + e.message, 'err'); });
+}
+
+function refreshLists(){
+  fillDatalist('dlWorkshops', uniq(records.map(function(r){ return r.workshop; })));
+  fillDatalist('dlTechs', uniq(records.map(function(r){ return r.technician; })));
+  fillDatalist('dlParts', uniq([].concat.apply([], records.map(function(r){ return (r.parts || []).map(function(p){ return p.name; }); }))));
+  fillDatalist('dlDrivers', uniq(records.map(function(r){ return r.driver; }).concat(assets.map(function(a){ return a.driver; }), employees)));
+}
+function ensureOption(id, v){ var el = $(id); if (v && !Array.prototype.some.call(el.options, function(o){ return o.value === v; })) { var o = document.createElement('option'); o.value = v; o.textContent = v; el.appendChild(o); } }
+function fillBranchSelects(){
+  ['rBranch', 'aBranch'].forEach(function(id){
+    var el = $(id), cur = el.value;
+    el.innerHTML = '<option value="">— بدون —</option>' + branches.map(function(b){ return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('');
+    if (cur) el.value = cur;
+  });
+}
+
+// ── التنقل ───────────────────────────────────────────────
+function renderNav(){
+  var html = '<button class="nav-link' + (view === 'dash' ? ' active' : '') + '" onclick="go(\'dash\')"><i class="fa-solid fa-gauge-high"></i> لوحة الصيانة</button>';
+  cats.forEach(function(c){
+    var cnt = records.filter(function(r){ return r.category === c.id; }).length;
+    html += '<button class="nav-link' + (view === 'cat' && curCat === c.id ? ' active' : '') + '" onclick="go(\'cat\',\'' + esc(c.id) + '\')"><i class="fa-solid ' + esc(c.icon || 'fa-screwdriver-wrench') + '"></i> ' + esc(c.name) + (cnt ? '<span class="nav-count">' + cnt + '</span>' : '') + '</button>';
+  });
+  html += '<button class="nav-link' + (view === 'settings' ? ' active' : '') + '" onclick="go(\'settings\')" style="margin-top:.5rem;border-top:1px solid rgba(255,255,255,.08)"><i class="fa-solid fa-sliders"></i> أقسام الصيانة</button>';
+  $('nav').innerHTML = html;
+}
+function go(v, catId){
+  view = v; if (catId) curCat = catId;
+  if (v === 'cat') { curTab = 'records'; $('fSearch').value = ''; $('fFrom').value = ''; $('fTo').value = ''; }
+  renderNav(); render();
+  window.scrollTo(0, 0);
+}
+function render(){
+  ['dash', 'cat', 'settings'].forEach(function(v){ $('v-' + v).classList.toggle('hidden', v !== view); });
+  var c = catById(curCat);
+  if (view === 'cat' && !c) { view = 'dash'; return render(); }
+  if (view === 'dash') { setHeader('fa-gauge-high', 'لوحة الصيانة', 'كل أقسام الصيانة في مكان واحد'); renderDash(); }
+  else if (view === 'cat') { setHeader(c.icon, c.name, 'السجل الكامل لكل ' + (c.asset || 'أصل') + ' وتاريخ أعطاله'); renderCat(); }
+  else { setHeader('fa-sliders', 'أقسام الصيانة', 'أضف أي قسم صيانة جديد وسيظهر في القائمة فوراً'); renderSettings(); }
+}
+function setHeader(icon, title, sub){ $('phIcon').className = 'fa-solid ' + (icon || 'fa-screwdriver-wrench'); $('phTitle').textContent = title; $('phSub').textContent = sub; }
+
+function stat(cls, icon, val, label){
+  return '<div class="ui-stat"><div class="ui-stat-icon ' + cls + '"><i class="fa-solid ' + icon + '"></i></div><div><div class="ui-stat-val">' + val + '</div><div class="ui-stat-lbl">' + label + '</div></div></div>';
+}
+
+// ── الصيانات القادمة: آخر سجل لكل (أصل + عطل) فيه موعد قادم ──
+function dueList(catId){
+  var latest = {};
+  records.forEach(function(r){
+    if (catId && r.category !== catId) return;
+    var k = r.assetId + '|' + fkey(r.fault);
+    if (!latest[k] || String(r.date) > String(latest[k].date)) latest[k] = r;
+  });
+  return Object.keys(latest).map(function(k){ return latest[k]; }).filter(function(r){ return r.nextDue; })
+    .map(function(r){ return Object.assign({ daysLeft: daysBetween(today(), r.nextDue) }, r); })
+    .filter(function(r){ return r.daysLeft <= 30; })
+    .sort(function(a, b){ return a.daysLeft - b.daysLeft; });
+}
+
+// ── لوحة الصيانة ─────────────────────────────────────────
+function renderDash(){
+  var month = today().substring(0, 7);
+  var mRec = records.filter(function(r){ return String(r.date).substring(0, 7) === month; });
+  var due = dueList();
+  var overdue = due.filter(function(r){ return r.daysLeft < 0; }).length;
+  $('dashStats').innerHTML =
+    stat('ui-i-blue', 'fa-screwdriver-wrench', mRec.length, 'صيانات هذا الشهر') +
+    stat('ui-i-green', 'fa-coins', fmt(mRec.reduce(function(s, r){ return s + n(r.total); }, 0)), 'تكلفة هذا الشهر') +
+    stat(overdue ? 'ui-i-red' : 'ui-i-orange', 'fa-calendar-check', due.filter(function(r){ return r.daysLeft <= 7; }).length, 'مستحقة خلال أسبوع / متأخرة') +
+    stat('ui-i-purple', 'fa-boxes-stacked', assets.length, 'أصول مسجّلة');
+  $('dueBody').innerHTML = due.length ? due.map(function(r){
+    var c = catById(r.category) || {};
+    var st = r.daysLeft < 0 ? '<span class="ui-badge ui-b-red">متأخرة ' + Math.abs(r.daysLeft) + ' يوم</span>' : r.daysLeft === 0 ? '<span class="ui-badge ui-b-orange">اليوم</span>' : r.daysLeft <= 7 ? '<span class="ui-badge ui-b-orange">بعد ' + r.daysLeft + ' يوم</span>' : '<span class="ui-badge ui-b-blue">بعد ' + r.daysLeft + ' يوم</span>';
+    return '<tr><td class="num">' + fmtDate(r.nextDue) + '</td><td><i class="fa-solid ' + esc(c.icon) + ' muted"></i> ' + esc(c.name || '') + '</td><td>' + esc(r.assetName) + '</td><td>' + esc(r.fault) + '</td><td>' + st + '</td>' +
+      '<td class="acts"><button class="btn btn-sm btn-light" onclick="repeatRecord(\'' + r.id + '\')"><i class="fa-solid fa-plus"></i> تسجيل الصيانة</button></td></tr>';
+  }).join('') : '<tr><td colspan="6" class="empty"><i class="fa-solid fa-circle-check"></i>لا توجد صيانات مستحقة خلال 30 يوماً</td></tr>';
+  var recent = records.slice(0, 10);
+  $('recentBody').innerHTML = recent.length ? recent.map(function(r){
+    var c = catById(r.category) || {};
+    return '<tr><td class="num">' + fmtDate(r.date) + '</td><td><i class="fa-solid ' + esc(c.icon) + ' muted"></i> ' + esc(c.name || '') + '</td><td>' + esc(r.assetName) + '</td><td>' + esc(r.fault) + '</td><td>' + esc(r.workshop || '—') + '</td><td class="num">' + fmt(r.total) + '</td>' +
+      '<td class="acts"><button class="icon-btn" title="عرض" onclick="viewRecord(\'' + r.id + '\')"><i class="fa-solid fa-eye"></i></button></td></tr>';
+  }).join('') : '<tr><td colspan="7" class="empty"><i class="fa-solid fa-screwdriver-wrench"></i>لا توجد صيانات بعد — اضغط "صيانة جديدة"</td></tr>';
+}
+
+// ── صفحة القسم ───────────────────────────────────────────
+function setTab(t){ curTab = t; renderCat(); }
+function renderCat(){
+  var c = catById(curCat), veh = isVeh(c);
+  document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === curTab); });
+  var plural = veh ? 'السيارات' : (c.asset ? 'الأصول (' + c.asset + ')' : 'الأصول');
+  $('assetsTabLabel').textContent = plural; $('assetsTitle').textContent = plural; $('addAssetLabel').textContent = 'إضافة ' + (c.asset || 'أصل');
+  $('recordsCard').classList.toggle('hidden', curTab !== 'records');
+  $('assetsCard').classList.toggle('hidden', curTab !== 'assets');
+  var recs = records.filter(function(r){ return r.category === c.id; });
+  var month = today().substring(0, 7), yr = today().substring(0, 4);
+  var catAssets = assets.filter(function(a){ return a.category === c.id; });
+  $('catStats').innerHTML =
+    stat('ui-i-blue', 'fa-list', recs.length, 'إجمالي الصيانات') +
+    stat('ui-i-green', 'fa-coins', fmt(recs.filter(function(r){ return String(r.date).substring(0, 7) === month; }).reduce(function(s, r){ return s + n(r.total); }, 0)), 'تكلفة هذا الشهر') +
+    stat('ui-i-orange', 'fa-chart-column', fmt(recs.filter(function(r){ return String(r.date).substring(0, 4) === yr; }).reduce(function(s, r){ return s + n(r.total); }, 0)), 'تكلفة هذه السنة') +
+    stat('ui-i-purple', c.icon || 'fa-boxes-stacked', catAssets.length, plural);
+  var fa = $('fAsset'), cur = fa.value;
+  fa.innerHTML = '<option value="">كل ' + esc(plural) + '</option>' + catAssets.map(function(a){ return '<option value="' + a.id + '">' + esc(assetLabel(a)) + '</option>'; }).join('');
+  if (cur && catAssets.some(function(a){ return a.id === cur; })) fa.value = cur;
+  if (curTab === 'records') renderRecords(); else renderAssets();
+}
+function assetLabel(a){ return a.name + (a.code ? ' — ' + a.code : ''); }
+function filteredRecords(){
+  var c = catById(curCat), q = norm($('fSearch').value), aid = $('fAsset').value, from = $('fFrom').value, to = $('fTo').value;
+  return records.filter(function(r){
+    if (r.category !== c.id) return false;
+    if (aid && r.assetId !== aid) return false;
+    if (from && r.date < from) return false;
+    if (to && r.date > to) return false;
+    if (q) { var hay = norm([r.assetName, r.fault, r.workshop, r.technician, r.driver, r.notes, partsText(r)].join(' ')); if (hay.indexOf(q) === -1) return false; }
+    return true;
+  });
+}
+function renderRecords(){
+  var c = catById(curCat), veh = isVeh(c), rows = filteredRecords();
+  $('recCount').textContent = '(' + rows.length + ')';
+  $('recHead').innerHTML = '<tr><th>التاريخ</th><th>' + esc(c.asset || 'الأصل') + '</th>' + (veh ? '<th>السائق</th>' : '') + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th><th></th></tr>';
+  var cols = veh ? 9 : 8;
+  $('recBody').innerHTML = rows.length ? rows.map(function(r){
+    return '<tr><td class="num">' + fmtDate(r.date) + '</td><td><b>' + esc(r.assetName) + '</b>' + (veh && r.odometer ? '<div class="muted">' + fmt(r.odometer) + ' كم</div>' : '') + '</td>' +
+      (veh ? '<td>' + esc(r.driver || '—') + '</td>' : '') +
+      '<td>' + esc(r.fault) + '</td><td>' + (partsText(r) ? '<span class="muted" style="font-size:.8rem;color:var(--ui-text2)">' + esc(partsText(r)) + '</span>' : '—') + '</td>' +
+      '<td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td>' +
+      '<td class="acts"><button class="icon-btn" title="عرض" onclick="viewRecord(\'' + r.id + '\')"><i class="fa-solid fa-eye"></i></button>' +
+      '<button class="icon-btn" title="تعديل" onclick="openRecord(\'' + r.id + '\')"><i class="fa-solid fa-pen"></i></button>' +
+      '<button class="icon-btn del" title="حذف" onclick="deleteRecord(\'' + r.id + '\')"><i class="fa-solid fa-trash"></i></button></td></tr>';
+  }).join('') : '<tr><td colspan="' + cols + '" class="empty"><i class="fa-solid fa-magnifying-glass"></i>لا توجد صيانات مطابقة</td></tr>';
+}
+function renderAssets(){
+  var c = catById(curCat), veh = isVeh(c);
+  var list = assets.filter(function(a){ return a.category === c.id; });
+  $('assetHead').innerHTML = '<tr><th>' + esc(c.asset || 'الأصل') + '</th><th>' + (veh ? 'رقم اللوحة' : 'الرقم / الموديل') + '</th>' + (veh ? '<th>السائق</th>' : '') + '<th>الفرع</th><th>عدد الصيانات</th><th>آخر صيانة</th><th>إجمالي التكلفة</th><th></th></tr>';
+  $('assetBody').innerHTML = list.length ? list.map(function(a){
+    var rs = records.filter(function(r){ return r.assetId === a.id; });
+    var last = rs[0];
+    return '<tr><td><b>' + esc(a.name) + '</b>' + (a.year ? ' <span class="muted">' + esc(a.year) + '</span>' : '') + '</td><td>' + esc(a.code || '—') + '</td>' +
+      (veh ? '<td>' + esc(a.driver || '—') + '</td>' : '') + '<td>' + esc(a.branch || '—') + '</td><td class="num">' + rs.length + '</td>' +
+      '<td>' + (last ? fmtDate(last.date) + '<div class="muted">' + esc(last.fault) + '</div>' : '—') + '</td><td class="num">' + fmt(rs.reduce(function(s, r){ return s + n(r.total); }, 0)) + '</td>' +
+      '<td class="acts"><button class="icon-btn" title="سجل الصيانات" onclick="showAssetRecords(\'' + a.id + '\')"><i class="fa-solid fa-list"></i></button>' +
+      '<button class="icon-btn" title="صيانة جديدة" onclick="openRecord(null,\'' + a.id + '\')"><i class="fa-solid fa-plus"></i></button>' +
+      '<button class="icon-btn" title="تعديل" onclick="openAsset(\'' + a.id + '\')"><i class="fa-solid fa-pen"></i></button>' +
+      '<button class="icon-btn del" title="حذف" onclick="deleteAsset(\'' + a.id + '\')"><i class="fa-solid fa-trash"></i></button></td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty"><i class="fa-solid ' + esc(c.icon) + '"></i>لا توجد ' + (veh ? 'سيارات' : 'أصول') + ' مسجّلة — تُضاف تلقائياً عند أول صيانة أو من زر الإضافة</td></tr>';
+}
+function showAssetRecords(id){ curTab = 'records'; renderCat(); $('fAsset').value = id; renderRecords(); }
+
+// ── إدخال الصيانة ────────────────────────────────────────
+function openRecord(id, assetId){
+  var r = id ? records.filter(function(x){ return x.id === id; })[0] : null;
+  var catId = r ? r.category : (assetId ? (assetById(assetId) || {}).category : (view === 'cat' ? curCat : (cats[0] && cats[0].id)));
+  $('recTitle').textContent = r ? 'تعديل صيانة' : 'صيانة جديدة';
+  $('rId').value = r ? r.id : '';
+  $('rCat').innerHTML = cats.map(function(c){ return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('');
+  $('rCat').value = catId; $('rCat').disabled = !!r;
+  fillAssetSelect(r ? r.assetId : (assetId || ''));
+  $('rDate').value = r ? r.date : today();
+  $('rDriver').value = r ? (r.driver || '') : '';
+  $('rOdo').value = r && r.odometer ? r.odometer : '';
+  $('rFault').value = r ? r.fault : '';
+  $('rWorkshop').value = r ? (r.workshop || '') : '';
+  $('rTech').value = r ? (r.technician || '') : '';
+  $('rLabor').value = r && r.labor ? r.labor : '';
+  if (r && r.branch) ensureOption('rBranch', r.branch);
+  $('rBranch').value = r ? (r.branch || '') : '';
+  $('rNext').value = r ? (r.nextDue || '') : '';
+  $('rNotes').value = r ? (r.notes || '') : '';
+  $('partsBody').innerHTML = '';
+  (r && r.parts && r.parts.length ? r.parts : [{}]).forEach(function(p){ addPartRow(p); });
+  applyCatFields();
+  if (!r && assetId) onRecAssetChange(); else updateNotes();
+  calcTotal();
+  openModal('recModal');
+  setTimeout(function(){ ($('rAsset').value ? $('rFault') : $('rAsset')).focus(); }, 60);
+}
+// تكرار صيانة مستحقة: نفس الأصل والعطل بتاريخ اليوم
+function repeatRecord(id){
+  var r = records.filter(function(x){ return x.id === id; })[0]; if (!r) return;
+  openRecord(null, r.assetId); $('rFault').value = r.fault; $('rWorkshop').value = r.workshop || ''; $('rTech').value = r.technician || ''; onFaultInput();
+}
+function applyCatFields(){
+  var c = catById($('rCat').value), veh = isVeh(c);
+  document.querySelectorAll('#recModal .veh').forEach(function(el){ el.classList.toggle('hidden', !veh); });
+  $('rAssetLabel').innerHTML = esc(c ? c.asset || 'الأصل' : 'الأصل') + ' <span class="req">*</span>';
+  $('rTechLabel').textContent = veh ? 'الميكانيكي (الصنايعي)' : 'الفني';
+  fillDatalist('dlFaults', uniq(records.filter(function(r){ return r.category === (c && c.id); }).map(function(r){ return r.fault; })));
+}
+function fillAssetSelect(sel){
+  var c = catById($('rCat').value);
+  var list = assets.filter(function(a){ return c && a.category === c.id; });
+  $('rAsset').innerHTML = '<option value="">— اختر ' + esc(c ? c.asset || 'الأصل' : 'الأصل') + ' —</option>' +
+    list.map(function(a){ return '<option value="' + a.id + '">' + esc(assetLabel(a)) + '</option>'; }).join('') +
+    '<option value="__new">＋ إضافة ' + esc(c ? c.asset || 'أصل' : 'أصل') + ' جديد...</option>';
+  $('rAsset').value = sel || '';
+}
+function onRecCatChange(){ fillAssetSelect(''); applyCatFields(); updateNotes(); }
+function onRecAssetChange(){
+  if ($('rAsset').value === '__new') { $('rAsset').value = ''; openAsset(null, $('rCat').value, true); return; }
+  var a = assetById($('rAsset').value);
+  if (a && !$('rId').value) {
+    if (a.driver && !$('rDriver').value) $('rDriver').value = a.driver;
+    if (a.branch && !$('rBranch').value) { ensureOption('rBranch', a.branch); $('rBranch').value = a.branch; }
+  }
+  updateNotes();
+}
+var _fTimer;
+function onFaultInput(){ clearTimeout(_fTimer); _fTimer = setTimeout(updateNotes, 200); }
+
+// الملاحظات الذكية: آخر صيانة للأصل + آخر مرة لنفس العطل
+function updateNotes(){
+  var aid = $('rAsset').value, f = fkey($('rFault').value), editId = $('rId').value;
+  var c = catById($('rCat').value), veh = isVeh(c), a = assetById(aid);
+  var assetRecs = aid ? records.filter(function(r){ return r.assetId === aid && r.id !== editId; }) : [];
+  // آخر صيانة لهذا الأصل
+  if (a && assetRecs.length) {
+    var last = assetRecs[0];
+    $('assetNoteWrap').innerHTML = '<div class="note info"><i class="fa-solid fa-circle-info"></i><div>آخر صيانة لـ <b>' + esc(a.name) + '</b>: ' + fmtDate(last.date) + ' (' + ago(last.date) + ') — ' + esc(last.fault) +
+      ' · إجمالي الصيانات: <b>' + assetRecs.length + '</b> بتكلفة <b>' + fmt(assetRecs.reduce(function(s, r){ return s + n(r.total); }, 0)) + '</b></div></div>';
+  } else $('assetNoteWrap').innerHTML = '';
+  // عداد الكيلومترات
+  var lastOdo = assetRecs.filter(function(r){ return n(r.odometer) > 0; })[0];
+  $('odoHint').textContent = veh && lastOdo ? 'آخر قراءة: ' + fmt(lastOdo.odometer) + ' كم بتاريخ ' + fmtDate(lastOdo.date) : '';
+  // نفس العطل
+  if (!aid || !f) { $('faultNoteWrap').innerHTML = ''; return; }
+  var same = assetRecs.filter(function(r){ return fkey(r.fault) === f; });
+  if (same.length) {
+    var s = same[0], days = daysBetween(s.date, $('rDate').value || today());
+    var km = veh && n(s.odometer) && n($('rOdo').value) ? ' · منذ <b>' + fmt(n($('rOdo').value) - n(s.odometer)) + '</b> كم' : '';
+    $('faultNoteWrap').innerHTML = '<div class="note warn"><i class="fa-solid fa-clock-rotate-left"></i><div>' +
+      '<b>تمت صيانة نفس العطل من قبل</b> لـ ' + esc(a ? a.name : '') + ': آخر مرة <b>' + fmtDate(s.date) + '</b> (منذ ' + days + ' يوم' + km + ')' +
+      (s.workshop ? ' — الورشة: ' + esc(s.workshop) : '') + (s.technician ? ' — ' + (veh ? 'الميكانيكي' : 'الفني') + ': ' + esc(s.technician) : '') +
+      (partsText(s) ? '<br>القطع المستبدلة وقتها: ' + esc(partsText(s)) : '') +
+      (same.length > 1 ? '<br>تكرر هذا العطل <b>' + (same.length + 1) + ' مرات</b> مع هذه المرة — التواريخ السابقة: ' + same.slice(0, 5).map(function(x){ return fmtDate(x.date); }).join('، ') : '') +
+      '</div></div>';
+  } else {
+    var others = records.filter(function(r){ return fkey(r.fault) === f && r.assetId !== aid && r.category === $('rCat').value; });
+    $('faultNoteWrap').innerHTML = '<div class="note ok"><i class="fa-solid fa-circle-check"></i><div>لم يُسجَّل هذا العطل ل' + thisWord(c && c.asset) + ' ' + esc(c ? c.asset || 'الأصل' : 'الأصل') + ' من قبل' +
+      (others.length ? ' — تكرر عند ' + others.length + ' ' + (veh ? 'سيارة' : 'أصل') + ' أخرى، آخرها ' + esc(others[0].assetName) + ' بتاريخ ' + fmtDate(others[0].date) : '') + '.</div></div>';
+  }
+}
+$('rDate') && $('rDate').addEventListener('change', updateNotes);
+$('rOdo') && $('rOdo').addEventListener('input', onFaultInput);
+
+function addPartRow(p){
+  p = p || {};
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td><input class="pName" list="dlParts" placeholder="اسم القطعة" value="' + esc(p.name || '') + '"></td>' +
+    '<td><input class="pQty" type="number" min="0" step="1" value="' + esc(p.qty || 1) + '" oninput="calcTotal()"></td>' +
+    '<td><input class="pCost" type="number" min="0" step="0.01" placeholder="0" value="' + (p.cost ? esc(p.cost) : '') + '" oninput="calcTotal()"></td>' +
+    '<td><button class="icon-btn del" title="حذف" onclick="this.closest(\'tr\').remove();calcTotal()"><i class="fa-solid fa-xmark"></i></button></td>';
+  $('partsBody').appendChild(tr);
+}
+function collectParts(){
+  return Array.prototype.map.call(document.querySelectorAll('#partsBody tr'), function(tr){
+    return { name: tr.querySelector('.pName').value.trim(), qty: n(tr.querySelector('.pQty').value) || 1, cost: n(tr.querySelector('.pCost').value) };
+  }).filter(function(p){ return p.name; });
+}
+function calcTotal(){
+  var parts = collectParts().reduce(function(s, p){ return s + p.cost; }, 0);
+  $('tParts').textContent = fmt(parts); $('tTotal').textContent = fmt(parts + n($('rLabor').value));
+}
+function saveRecord(){
+  var id = $('rId').value, c = catById($('rCat').value), a = assetById($('rAsset').value);
+  if (!c) return toast('اختر القسم', 'err');
+  if (!a) return toast('اختر ' + (c.asset || 'الأصل'), 'err');
+  if (!$('rDate').value) return toast('أدخل تاريخ الصيانة', 'err');
+  if (!$('rFault').value.trim()) return toast('أدخل العطل / نوع الصيانة', 'err');
+  var parts = collectParts(), partsCost = parts.reduce(function(s, p){ return s + p.cost; }, 0), labor = n($('rLabor').value);
+  var data = {
+    category: c.id, assetId: a.id, assetName: a.name, assetCode: a.code || '',
+    date: $('rDate').value, fault: $('rFault').value.trim(), parts: parts,
+    workshop: $('rWorkshop').value.trim(), technician: $('rTech').value.trim(),
+    driver: isVeh(c) ? $('rDriver').value.trim() : '', odometer: isVeh(c) ? n($('rOdo').value) : 0,
+    partsCost: partsCost, labor: labor, total: partsCost + labor,
+    branch: $('rBranch').value, nextDue: $('rNext').value || '', notes: $('rNotes').value.trim(),
+    updatedAt: new Date().toISOString(), updatedBy: who()
+  };
+  if (!id) { data.createdAt = data.updatedAt; data.createdBy = who(); }
+  var btn = $('rSave'); btn.disabled = true;
+  var ref = id ? db.collection('maint_records').doc(id) : db.collection('maint_records').doc();
+  (id ? ref.update(data) : ref.set(data)).then(function(){
+    // تحديث السائق الافتراضي للسيارة إن لم يكن محدداً
+    if (isVeh(c) && data.driver && !a.driver) db.collection('maint_assets').doc(a.id).update({ driver: data.driver }).catch(function(){});
+    closeModal('recModal'); toast(id ? 'تم تعديل الصيانة ✓' : 'تم حفظ الصيانة ✓', 'ok');
+  }).catch(function(e){ toast('تعذّر الحفظ: ' + e.message, 'err'); }).then(function(){ btn.disabled = false; });
+}
+function deleteRecord(id){
+  var r = records.filter(function(x){ return x.id === id; })[0]; if (!r) return;
+  if (!confirm('حذف صيانة "' + r.fault + '" لـ ' + r.assetName + ' بتاريخ ' + fmtDate(r.date) + '؟')) return;
+  db.collection('maint_records').doc(id).delete().then(function(){ toast('تم الحذف', 'ok'); closeModal('viewModal'); }).catch(function(e){ toast(e.message, 'err'); });
+}
+function viewRecord(id){
+  var r = records.filter(function(x){ return x.id === id; })[0]; if (!r) return;
+  var c = catById(r.category) || {}, veh = isVeh(c);
+  var rows = [
+    ['القسم', '<i class="fa-solid ' + esc(c.icon) + ' muted"></i> ' + esc(c.name || '')],
+    [c.asset || 'الأصل', '<b>' + esc(r.assetName) + '</b>' + (r.assetCode ? ' — ' + esc(r.assetCode) : '')],
+    ['التاريخ', fmtDate(r.date) + ' <span class="muted">(' + ago(r.date) + ')</span>'],
+    ['العطل', esc(r.fault)]
+  ];
+  if (veh) { rows.push(['السائق', esc(r.driver || '—')]); if (r.odometer) rows.push(['العداد', fmt(r.odometer) + ' كم']); }
+  rows.push(['قطع الغيار', (r.parts || []).length ? (r.parts || []).map(function(p){ return '<span class="chip">' + esc(p.name) + (n(p.qty) > 1 ? ' ×' + p.qty : '') + (p.cost ? ' · ' + fmt(p.cost) : '') + '</span>'; }).join(' ') : '—']);
+  rows.push(['الورشة', esc(r.workshop || '—')], [veh ? 'الميكانيكي' : 'الفني', esc(r.technician || '—')]);
+  rows.push(['التكلفة', 'القطع ' + fmt(r.partsCost) + ' + الأجرة ' + fmt(r.labor) + ' = <b>' + fmt(r.total) + '</b>']);
+  if (r.branch) rows.push(['الفرع', esc(r.branch)]);
+  if (r.nextDue) rows.push(['الصيانة القادمة', fmtDate(r.nextDue)]);
+  if (r.notes) rows.push(['ملاحظات', esc(r.notes)]);
+  rows.push(['أدخلها', esc(r.createdBy || '—') + (r.updatedBy && r.updatedBy !== r.createdBy ? ' <span class="muted">(عدّلها ' + esc(r.updatedBy) + ')</span>' : '')]);
+  $('viewBody').innerHTML = '<dl class="kv">' + rows.map(function(x){ return '<dt>' + esc(x[0]) + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl>';
+  $('viewFoot').innerHTML = '<button class="btn btn-primary" onclick="closeModal(\'viewModal\');openRecord(\'' + r.id + '\')"><i class="fa-solid fa-pen"></i> تعديل</button>' +
+    '<button class="btn btn-danger" onclick="deleteRecord(\'' + r.id + '\')"><i class="fa-solid fa-trash"></i> حذف</button>' +
+    '<button class="btn btn-light" style="margin-right:auto" onclick="closeModal(\'viewModal\')">إغلاق</button>';
+  openModal('viewModal');
+}
+
+// ── الأصول ───────────────────────────────────────────────
+var _assetReturn = false;
+function openAsset(id, catId, fromRecord){
+  var a = id ? assetById(id) : null;
+  var c = catById(a ? a.category : (catId || curCat)), veh = isVeh(c);
+  _assetReturn = !!fromRecord;
+  $('assetModal').dataset.cat = c.id;
+  $('assetModalTitle').textContent = (a ? 'تعديل ' : 'إضافة ') + (c.asset || 'أصل');
+  $('aId').value = a ? a.id : '';
+  $('aNameLabel').innerHTML = (veh ? 'نوع السيارة' : 'اسم ' + esc(c.asset || 'الأصل')) + ' <span class="req">*</span>';
+  $('aName').placeholder = veh ? 'مثال: تويوتا هايلكس 2020' : 'مثال: ' + (c.id === 'ac' ? 'مكيف سبليت — المطبخ' : 'فرن الشاورما — الفرع الرئيسي');
+  $('aCodeLabel').textContent = veh ? 'رقم اللوحة' : 'الرقم التسلسلي / الموديل';
+  document.querySelectorAll('#assetModal .veh-a').forEach(function(el){ el.classList.toggle('hidden', !veh); });
+  $('aName').value = a ? a.name : ''; $('aCode').value = a ? (a.code || '') : ''; if (a && a.branch) ensureOption('aBranch', a.branch); $('aBranch').value = a ? (a.branch || '') : '';
+  $('aDriver').value = a ? (a.driver || '') : ''; $('aYear').value = a ? (a.year || '') : ''; $('aNotes').value = a ? (a.notes || '') : '';
+  openModal('assetModal'); setTimeout(function(){ $('aName').focus(); }, 60);
+}
+function saveAsset(){
+  var id = $('aId').value, name = $('aName').value.trim(), catId = $('assetModal').dataset.cat;
+  if (!name) return toast('أدخل الاسم', 'err');
+  var data = { category: catId, name: name, code: $('aCode').value.trim(), branch: $('aBranch').value, driver: $('aDriver').value.trim(),
+    year: $('aYear').value || '', notes: $('aNotes').value.trim(), active: true, updatedAt: new Date().toISOString() };
+  var ref = id ? db.collection('maint_assets').doc(id) : db.collection('maint_assets').doc();
+  if (!id) { data.createdAt = data.updatedAt; data.createdBy = who(); }
+  (id ? ref.update(data) : ref.set(data)).then(function(){
+    closeModal('assetModal'); toast('تم الحفظ ✓', 'ok');
+    // تحديث الاسم في السجلات السابقة
+    if (id) records.filter(function(r){ return r.assetId === id && (r.assetName !== name || (r.assetCode || '') !== data.code); }).forEach(function(r){
+      db.collection('maint_records').doc(r.id).update({ assetName: name, assetCode: data.code }).catch(function(){});
+    });
+    if (_assetReturn) setTimeout(function(){ fillAssetSelect(ref.id); onRecAssetChange(); }, 300);
+  }).catch(function(e){ toast('تعذّر الحفظ: ' + e.message, 'err'); });
+}
+function deleteAsset(id){
+  var a = assetById(id); if (!a) return;
+  var cnt = records.filter(function(r){ return r.assetId === id; }).length;
+  if (!confirm('حذف "' + a.name + '" من القائمة؟' + (cnt ? '\nسجل صياناته (' + cnt + ') يبقى محفوظاً.' : ''))) return;
+  db.collection('maint_assets').doc(id).update({ active: false }).then(function(){ toast('تم الحذف', 'ok'); }).catch(function(e){ toast(e.message, 'err'); });
+}
+
+// ── أقسام الصيانة ────────────────────────────────────────
+var _icon = 'fa-screwdriver-wrench';
+function renderSettings(){
+  $('catBody').innerHTML = cats.map(function(c){
+    return '<tr><td><i class="fa-solid ' + esc(c.icon) + '" style="color:var(--ui-accent);width:20px"></i> <b>' + esc(c.name) + '</b></td>' +
+      '<td>' + (isVeh(c) ? '<span class="ui-badge ui-b-blue">مركبات</span>' : '<span class="ui-badge ui-b-gray">عام</span>') + '</td><td>' + esc(c.asset || '—') + '</td>' +
+      '<td class="num">' + assets.filter(function(a){ return a.category === c.id; }).length + '</td><td class="num">' + records.filter(function(r){ return r.category === c.id; }).length + '</td>' +
+      '<td class="acts"><button class="icon-btn" title="تعديل" onclick="openCategory(\'' + c.id + '\')"><i class="fa-solid fa-pen"></i></button>' +
+      '<button class="icon-btn del" title="حذف" onclick="deleteCategory(\'' + c.id + '\')"><i class="fa-solid fa-trash"></i></button></td></tr>';
+  }).join('');
+}
+function openCategory(id){
+  var c = id ? catById(id) : null;
+  $('catModalTitle').textContent = c ? 'تعديل قسم الصيانة' : 'قسم صيانة جديد';
+  $('cId').value = c ? c.id : ''; $('cName').value = c ? c.name : ''; $('cAsset').value = c ? (c.asset || '') : ''; $('cKind').value = c ? (c.kind || 'general') : 'general';
+  _icon = c ? (c.icon || 'fa-screwdriver-wrench') : 'fa-screwdriver-wrench';
+  renderIconPick(); openModal('catModal'); setTimeout(function(){ $('cName').focus(); }, 60);
+}
+function renderIconPick(){
+  $('cIcons').innerHTML = ICONS.map(function(i){ return '<button type="button" class="' + (i === _icon ? 'on' : '') + '" onclick="_icon=\'' + i + '\';renderIconPick()"><i class="fa-solid ' + i + '"></i></button>'; }).join('');
+}
+function saveCategory(){
+  var id = $('cId').value, name = $('cName').value.trim();
+  if (!name) return toast('أدخل اسم القسم', 'err');
+  var data = { name: name, asset: $('cAsset').value.trim() || 'الأصل', kind: $('cKind').value, icon: _icon, active: true };
+  var ref = id ? db.collection('maint_categories').doc(id) : db.collection('maint_categories').doc();
+  if (!id) data.order = cats.length + 1;
+  (id ? ref.update(data) : ref.set(Object.assign({ createdAt: new Date().toISOString() }, data))).then(function(){ closeModal('catModal'); toast('تم الحفظ ✓', 'ok'); })
+    .catch(function(e){ toast(e.message, 'err'); });
+}
+function deleteCategory(id){
+  var c = catById(id), cnt = records.filter(function(r){ return r.category === id; }).length;
+  if (cnt) return toast('لا يمكن حذف قسم فيه صيانات (' + cnt + ')', 'err');
+  if (!confirm('حذف قسم "' + c.name + '"؟')) return;
+  db.collection('maint_categories').doc(id).update({ active: false }).then(function(){ toast('تم الحذف', 'ok'); }).catch(function(e){ toast(e.message, 'err'); });
+}
+
+// ── تصدير ────────────────────────────────────────────────
+function exportCsv(){
+  var c = catById(curCat), veh = isVeh(c), rows = filteredRecords();
+  if (!rows.length) return toast('لا توجد سجلات للتصدير', 'err');
+  var q = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+  var head = ['التاريخ', c.asset || 'الأصل', veh ? 'رقم اللوحة' : 'الرقم'].concat(veh ? ['السائق', 'العداد'] : [], ['العطل', 'قطع الغيار', 'الورشة', 'الفني', 'تكلفة القطع', 'الأجرة', 'الإجمالي', 'الفرع', 'الصيانة القادمة', 'ملاحظات']);
+  var lines = rows.map(function(r){
+    return [r.date, r.assetName, r.assetCode].concat(veh ? [r.driver, r.odometer || ''] : [], [r.fault, partsText(r), r.workshop, r.technician, r.partsCost, r.labor, r.total, r.branch, r.nextDue, r.notes]).map(q).join(',');
+  });
+  var csv = '﻿' + head.map(q).join(',') + '\n' + lines.join('\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = c.name + '_' + today() + '.csv'; a.click();
+}
+
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') ['catModal', 'assetModal', 'viewModal', 'recModal'].some(function(id){ if (!$(id).classList.contains('hidden')) { closeModal(id); return true; } });
+});
+</script>
+</body>
+</html>

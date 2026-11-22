@@ -297,6 +297,37 @@
       });
     },
 
+    maint: function () {
+      var month = today(0).substring(0, 7);
+      return db.collection('maint_records').get().then(function (s) {
+        var recs = s.docs.map(function (d) { return d.data(); });
+        // آخر سجل لكل (أصل + عطل) — موعد الصيانة القادمة يُؤخذ منه فقط
+        var latest = {};
+        recs.forEach(function (r) {
+          var k = r.assetId + '|' + String(r.fault || '').replace(/\s+/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+          if (!latest[k] || String(r.date) > String(latest[k].date)) latest[k] = r;
+        });
+        var due = Object.keys(latest).map(function (k) { return latest[k]; }).filter(function (r) { return r.nextDue; })
+          .map(function (r) { return { r: r, days: daysUntil(r.nextDue) }; }).filter(function (x) { return x.days !== null && x.days <= 7; })
+          .sort(function (a, b) { return a.days - b.days; });
+        var overdue = due.filter(function (x) { return x.days < 0; }), soon = due.filter(function (x) { return x.days >= 0; });
+        var alerts = [];
+        if (overdue.length) alerts.push({ level: 'danger', icon: 'fa-screwdriver-wrench', title: overdue.length + ' صيانة متأخرة عن موعدها',
+          items: overdue.map(function (x) { return x.r.assetName + ' — ' + x.r.fault + ' (متأخرة ' + Math.abs(x.days) + ' يوم)'; }) });
+        if (soon.length) alerts.push({ level: 'warning', icon: 'fa-calendar-check', title: soon.length + ' صيانة مستحقة خلال أسبوع',
+          items: soon.map(function (x) { return x.r.assetName + ' — ' + x.r.fault + ' (' + (x.days === 0 ? 'اليوم' : 'بعد ' + x.days + ' يوم') + ')'; }) });
+        var m = recs.filter(function (r) { return String(r.date).substring(0, 7) === month; });
+        return {
+          kpis: [
+            { label: 'صيانات الشهر', value: m.length, color: '#1565c0' },
+            { label: 'تكلفة الشهر', value: fmt(m.reduce(function (a, r) { return a + (+r.total || 0); }, 0)), color: '#2e7d32' },
+            { label: 'مستحقة / متأخرة', value: due.length, color: due.length ? '#e65100' : '#888' }
+          ],
+          alerts: alerts
+        };
+      });
+    },
+
     journal: function () {
       var y = today(-1), monthStart = today(0).substring(0, 8) + '01';
       return Promise.all([db.collection('journal_entries').where('date', '>=', monthStart).get(), Branches.ready()]).then(function (r) {

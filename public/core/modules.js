@@ -68,5 +68,14 @@ window.ALL_MODULES = [
     path: '/modules/journal/index.html',
     branchRefs: [{ col: 'journal_entries', field: 'branch' }],
     branchLists: [{ doc: 'journal_settings/main', field: 'branches' }]
+  },
+  {
+    id: 'maint',
+    title: 'الصيانة',
+    description: 'صيانة السيارات والمعدات والمكيفات وأي أقسام أخرى، مع سجل كامل لكل أصل وتنبيه بالصيانات القادمة',
+    icon: 'fa-screwdriver-wrench',
+    color: '#0ca678',
+    path: '/modules/maint/index.html',
+    branchRefs: [{ col: 'maint_records', field: 'branch' }, { col: 'maint_assets', field: 'branch' }]
   }
 ];
