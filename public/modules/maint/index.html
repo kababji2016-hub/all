@@ -237,8 +237,8 @@
       <div class="grid">
         <div class="f"><label>القسم <span class="req">*</span></label><select id="rCat" onchange="onRecCatChange()"></select></div>
         <div class="f span2"><label id="rAssetLabel">الأصل <span class="req">*</span></label><select id="rAsset" onchange="onRecAssetChange()"></select></div>
-        <div class="f veh"><label>السائق</label><input id="rDriver" list="dlDrivers" placeholder="اسم السائق"></div>
-        <div class="f veh"><label>عداد الكيلومترات</label><input id="rOdo" type="number" min="0" placeholder="مثال: 125000"><div class="hint" id="odoHint"></div></div>
+        <div class="f"><label id="rDriverLabel">السائق</label><input id="rDriver" list="dlDrivers" placeholder="الاسم"></div>
+        <div class="f"><label id="rOdoLabel">عداد الكيلومترات</label><input id="rOdo" type="number" min="0" placeholder="مثال: 125000"><div class="hint" id="odoHint"></div></div>
         <div class="f"><label>تاريخ الصيانة <span class="req">*</span></label><input id="rDate" type="date"></div>
         <div class="f span3" id="assetNoteWrap"></div>
         <div class="f span3"><label>العطل / نوع الصيانة <span class="req">*</span></label><input id="rFault" list="dlFaults" placeholder="مثال: تغيير زيت وفلتر، كفرات، تسريب ماء..." oninput="onFaultInput()"></div>
@@ -290,8 +290,8 @@
         <div class="f span3"><label id="aNameLabel">الاسم / النوع <span class="req">*</span></label><input id="aName" placeholder=""></div>
         <div class="f"><label id="aCodeLabel">رقم اللوحة</label><input id="aCode"></div>
         <div class="f"><label>الفرع</label><select id="aBranch"></select></div>
-        <div class="f veh-a"><label>السائق الافتراضي</label><input id="aDriver" list="dlDrivers"></div>
-        <div class="f veh-a"><label>سنة الصنع</label><input id="aYear" type="number" min="1980" max="2100"></div>
+        <div class="f"><label id="aDriverLabel">السائق الافتراضي</label><input id="aDriver" list="dlDrivers"></div>
+        <div class="f"><label id="aYearLabel">سنة الصنع</label><input id="aYear" type="number" min="1980" max="2100"></div>
         <div class="f span3"><label>ملاحظات</label><textarea id="aNotes"></textarea></div>
       </div>
     </div>
@@ -311,7 +311,7 @@
       <div class="grid" style="grid-template-columns:1fr 1fr">
         <div class="f span3"><label>اسم القسم <span class="req">*</span></label><input id="cName" placeholder="مثال: صيانة الثلاجات"></div>
         <div class="f"><label>اسم الأصل (المفرد)</label><input id="cAsset" placeholder="مثال: الثلاجة"></div>
-        <div class="f"><label>النوع</label><select id="cKind"><option value="general">عام (معدات / أجهزة)</option><option value="vehicle">مركبات (فيها سائق وعداد كيلومترات)</option></select></div>
+        <div class="f"><label>النوع</label><select id="cKind"><option value="general">عام — المسؤول وساعات التشغيل</option><option value="vehicle">مركبات — السائق وعداد الكيلومترات</option></select></div>
         <div class="f span3"><label>الأيقونة</label><div class="icon-pick" id="cIcons"></div></div>
       </div>
     </div>
@@ -373,6 +373,16 @@ function openModal(id){ $(id).classList.remove('hidden'); }
 function catById(id){ return cats.filter(function(c){ return c.id === id; })[0] || null; }
 function assetById(id){ return assets.filter(function(a){ return a.id === id; })[0] || null; }
 function isVeh(cat){ return cat && cat.kind === 'vehicle'; }
+// نفس نموذج صيانة السيارات لكل الأقسام — فقط المسمّيات تتغيّر حسب نوع القسم
+function LB(cat){
+  var v = isVeh(cat);
+  return {
+    person: v ? 'السائق' : 'المسؤول', personDef: v ? 'السائق الافتراضي' : 'المسؤول الافتراضي',
+    meter: v ? 'عداد الكيلومترات' : 'قراءة العداد / ساعات التشغيل', meterShort: v ? 'العداد (كم)' : 'العداد / الساعات', unit: v ? ' كم' : '',
+    tech: v ? 'الميكانيكي' : 'الفني', techFull: v ? 'الميكانيكي (الصنايعي)' : 'الفني (الصنايعي)',
+    code: v ? 'رقم اللوحة' : 'الرقم التسلسلي / الموديل', year: v ? 'سنة الصنع' : 'سنة الصنع / الشراء'
+  };
+}
 function who(){ return (profile && (profile.name || profile.username)) || ''; }
 function partsText(r){ return (r.parts || []).filter(function(p){ return p.name; }).map(function(p){ return p.name + (n(p.qty) > 1 ? ' ×' + p.qty : ''); }).join('، '); }
 function uniq(arr){ var s = {}, out = []; arr.forEach(function(v){ v = String(v || '').trim(); if (v && !s[norm(v)]) { s[norm(v)] = 1; out.push(v); } }); return out.sort(function(a, b){ return a.localeCompare(b, 'ar'); }); }
@@ -537,11 +547,11 @@ function filteredRecords(){
 function renderRecords(){
   var c = catById(curCat), veh = isVeh(c), rows = filteredRecords();
   $('recCount').textContent = '(' + rows.length + ')';
-  $('recHead').innerHTML = '<tr><th>التاريخ</th><th>' + esc(c.asset || 'الأصل') + '</th>' + (veh ? '<th>السائق</th>' : '') + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th><th></th></tr>';
-  var cols = veh ? 9 : 8;
+  $('recHead').innerHTML = '<tr><th>التاريخ</th><th>' + esc(c.asset || 'الأصل') + '</th>' + '<th>' + LB(c).person + '</th>' + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th><th></th></tr>';
+  var cols = 9;
   $('recBody').innerHTML = rows.length ? rows.map(function(r){
-    return '<tr><td class="num">' + fmtDate(r.date) + '</td><td><b>' + esc(r.assetName) + '</b>' + (veh && r.odometer ? '<div class="muted">' + fmt(r.odometer) + ' كم</div>' : '') + '</td>' +
-      (veh ? '<td>' + esc(r.driver || '—') + '</td>' : '') +
+    return '<tr><td class="num">' + fmtDate(r.date) + '</td><td><b>' + esc(r.assetName) + '</b>' + (r.odometer ? '<div class="muted">' + fmt(r.odometer) + LB(c).unit + '</div>' : '') + '</td>' +
+      '<td>' + esc(r.driver || '—') + '</td>' +
       '<td>' + esc(r.fault) + (r.filesCount ? ' <i class="fa-solid fa-paperclip muted" title="' + r.filesCount + ' مرفق"></i>' : '') + '</td><td>' + (partsText(r) ? '<span class="muted" style="font-size:.8rem;color:var(--ui-text2)">' + esc(partsText(r)) + '</span>' : '—') + '</td>' +
       '<td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td>' +
       '<td class="acts"><button class="icon-btn" title="عرض" onclick="viewRecord(\'' + r.id + '\')"><i class="fa-solid fa-eye"></i></button>' +
@@ -553,12 +563,12 @@ function renderRecords(){
 function renderAssets(){
   var c = catById(curCat), veh = isVeh(c);
   var list = assets.filter(function(a){ return a.category === c.id; });
-  $('assetHead').innerHTML = '<tr><th>' + esc(c.asset || 'الأصل') + '</th><th>' + (veh ? 'رقم اللوحة' : 'الرقم / الموديل') + '</th>' + (veh ? '<th>السائق</th>' : '') + '<th>الفرع</th><th>عدد الصيانات</th><th>آخر صيانة</th><th>إجمالي التكلفة</th><th></th></tr>';
+  $('assetHead').innerHTML = '<tr><th>' + esc(c.asset || 'الأصل') + '</th><th>' + LB(c).code + '</th>' + '<th>' + LB(c).person + '</th>' + '<th>الفرع</th><th>عدد الصيانات</th><th>آخر صيانة</th><th>إجمالي التكلفة</th><th></th></tr>';
   $('assetBody').innerHTML = list.length ? list.map(function(a){
     var rs = records.filter(function(r){ return r.assetId === a.id; });
     var last = rs[0];
     return '<tr><td><b>' + esc(a.name) + '</b>' + (a.year ? ' <span class="muted">' + esc(a.year) + '</span>' : '') + '</td><td>' + esc(a.code || '—') + '</td>' +
-      (veh ? '<td>' + esc(a.driver || '—') + '</td>' : '') + '<td>' + esc(a.branch || '—') + '</td><td class="num">' + rs.length + '</td>' +
+      '<td>' + esc(a.driver || '—') + '</td>' + '<td>' + esc(a.branch || '—') + '</td><td class="num">' + rs.length + '</td>' +
       '<td>' + (last ? fmtDate(last.date) + '<div class="muted">' + esc(last.fault) + '</div>' : '—') + '</td><td class="num">' + fmt(rs.reduce(function(s, r){ return s + n(r.total); }, 0)) + '</td>' +
       '<td class="acts"><button class="icon-btn" title="سجل الصيانات" onclick="showAssetRecords(\'' + a.id + '\')"><i class="fa-solid fa-list"></i></button>' +
       '<button class="icon-btn" title="صيانة جديدة" onclick="openRecord(null,\'' + a.id + '\')"><i class="fa-solid fa-plus"></i></button>' +
@@ -606,9 +616,9 @@ function repeatRecord(id){
 }
 function applyCatFields(){
   var c = catById($('rCat').value), veh = isVeh(c);
-  document.querySelectorAll('#recModal .veh').forEach(function(el){ el.classList.toggle('hidden', !veh); });
+  $('rDriverLabel').textContent = LB(c).person; $('rOdoLabel').textContent = LB(c).meter;
   $('rAssetLabel').innerHTML = esc(c ? c.asset || 'الأصل' : 'الأصل') + ' <span class="req">*</span>';
-  $('rTechLabel').textContent = veh ? 'الميكانيكي (الصنايعي)' : 'الفني';
+  $('rTechLabel').textContent = LB(c).techFull;
   fillDatalist('dlFaults', uniq(records.filter(function(r){ return r.category === (c && c.id); }).map(function(r){ return r.fault; })));
 }
 function fillAssetSelect(sel){
@@ -646,16 +656,16 @@ function updateNotes(){
   } else $('assetNoteWrap').innerHTML = '';
   // عداد الكيلومترات
   var lastOdo = assetRecs.filter(function(r){ return n(r.odometer) > 0; })[0];
-  $('odoHint').textContent = veh && lastOdo ? 'آخر قراءة: ' + fmt(lastOdo.odometer) + ' كم بتاريخ ' + fmtDate(lastOdo.date) : '';
+  $('odoHint').textContent = lastOdo ? 'آخر قراءة: ' + fmt(lastOdo.odometer) + LB(c).unit + ' بتاريخ ' + fmtDate(lastOdo.date) : '';
   // نفس العطل
   if (!aid || !f) { $('faultNoteWrap').innerHTML = ''; return; }
   var same = assetRecs.filter(function(r){ return fkey(r.fault) === f; });
   if (same.length) {
     var s = same[0], days = daysBetween(s.date, $('rDate').value || today());
-    var km = veh && n(s.odometer) && n($('rOdo').value) ? ' · منذ <b>' + fmt(n($('rOdo').value) - n(s.odometer)) + '</b> كم' : '';
+    var km = n(s.odometer) && n($('rOdo').value) ? ' · منذ <b>' + fmt(n($('rOdo').value) - n(s.odometer)) + '</b>' + (isVeh(c) ? ' كم' : ' على العداد') : '';
     $('faultNoteWrap').innerHTML = '<div class="note warn"><i class="fa-solid fa-clock-rotate-left"></i><div>' +
       '<b>تمت صيانة نفس العطل من قبل</b> لـ ' + esc(a ? a.name : '') + ': آخر مرة <b>' + fmtDate(s.date) + '</b> (منذ ' + days + ' يوم' + km + ')' +
-      (s.workshop ? ' — الورشة: ' + esc(s.workshop) : '') + (s.technician ? ' — ' + (veh ? 'الميكانيكي' : 'الفني') + ': ' + esc(s.technician) : '') +
+      (s.workshop ? ' — الورشة: ' + esc(s.workshop) : '') + (s.technician ? ' — ' + LB(c).tech + ': ' + esc(s.technician) : '') +
       (partsText(s) ? '<br>القطع المستبدلة وقتها: ' + esc(partsText(s)) : '') +
       (same.length > 1 ? '<br>تكرر هذا العطل <b>' + (same.length + 1) + ' مرات</b> مع هذه المرة — التواريخ السابقة: ' + same.slice(0, 5).map(function(x){ return fmtDate(x.date); }).join('، ') : '') +
       '</div></div>';
@@ -700,7 +710,7 @@ function saveRecord(){
     category: c.id, assetId: a.id, assetName: a.name, assetCode: a.code || '',
     date: $('rDate').value, fault: $('rFault').value.trim(), parts: parts,
     workshop: $('rWorkshop').value.trim(), technician: $('rTech').value.trim(),
-    driver: isVeh(c) ? $('rDriver').value.trim() : '', odometer: isVeh(c) ? n($('rOdo').value) : 0,
+    driver: $('rDriver').value.trim(), odometer: n($('rOdo').value),
     partsCost: partsCost, labor: labor, total: partsCost + labor,
     branch: $('rBranch').value, nextDue: $('rNext').value || '', notes: $('rNotes').value.trim(),
     updatedAt: new Date().toISOString(), updatedBy: who()
@@ -711,7 +721,7 @@ function saveRecord(){
   if (formFiles.some(function(f){ return f.data === null && !f.id; })) { btn.disabled = false; return toast('انتظر حتى ينتهي تجهيز المرفقات', 'err'); }
   (id ? ref.update(data) : ref.set(data)).then(function(){ return saveFiles(ref.id, a.id); }).then(function(){
     // تحديث السائق الافتراضي للسيارة إن لم يكن محدداً
-    if (isVeh(c) && data.driver && !a.driver) db.collection('maint_assets').doc(a.id).update({ driver: data.driver }).catch(function(){});
+    if (data.driver && !a.driver) db.collection('maint_assets').doc(a.id).update({ driver: data.driver }).catch(function(){});
     closeModal('recModal'); toast(id ? 'تم تعديل الصيانة ✓' : 'تم حفظ الصيانة ✓', 'ok');
   }).catch(function(e){ toast('تعذّر الحفظ: ' + e.message, 'err'); }).then(function(){ btn.disabled = false; });
 }
@@ -730,9 +740,9 @@ function viewRecord(id){
     ['التاريخ', fmtDate(r.date) + ' <span class="muted">(' + ago(r.date) + ')</span>'],
     ['العطل', esc(r.fault)]
   ];
-  if (veh) { rows.push(['السائق', esc(r.driver || '—')]); if (r.odometer) rows.push(['العداد', fmt(r.odometer) + ' كم']); }
+  rows.push([LB(c).person, esc(r.driver || '—')]); if (r.odometer) rows.push([LB(c).meterShort, fmt(r.odometer) + LB(c).unit]);
   rows.push(['قطع الغيار', (r.parts || []).length ? (r.parts || []).map(function(p){ return '<span class="chip">' + esc(p.name) + (n(p.qty) > 1 ? ' ×' + p.qty : '') + (p.supplier ? ' · <i class="fa-solid fa-store" style="opacity:.6"></i> ' + esc(p.supplier) : '') + (p.invoice ? ' · <i class="fa-solid fa-receipt" style="opacity:.6"></i> فاتورة ' + esc(p.invoice) : '') + (p.cost ? ' · ' + fmt(p.cost) : '') + (warrantyEnd(r, p) ? ' · <i class="fa-solid fa-shield-halved" style="color:' + (warrantyEnd(r, p) >= today() ? '#2e7d32' : '#999') + '"></i> ضمان حتى ' + fmtDate(warrantyEnd(r, p)) : '') + '</span>'; }).join(' ') : '—']);
-  rows.push(['الورشة', esc(r.workshop || '—')], [veh ? 'الميكانيكي' : 'الفني', esc(r.technician || '—')]);
+  rows.push(['الورشة', esc(r.workshop || '—')], [LB(c).tech, esc(r.technician || '—')]);
   rows.push(['التكلفة', 'القطع ' + fmt(r.partsCost) + ' + الأجرة ' + fmt(r.labor) + ' = <b>' + fmt(r.total) + '</b>']);
   if (r.branch) rows.push(['الفرع', esc(r.branch)]);
   if (r.nextDue) rows.push(['الصيانة القادمة', fmtDate(r.nextDue)]);
@@ -763,8 +773,8 @@ function openAsset(id, catId, fromRecord){
   $('aId').value = a ? a.id : '';
   $('aNameLabel').innerHTML = (veh ? 'نوع السيارة' : 'اسم ' + esc(c.asset || 'الأصل')) + ' <span class="req">*</span>';
   $('aName').placeholder = veh ? 'مثال: تويوتا هايلكس 2020' : 'مثال: ' + (c.id === 'ac' ? 'مكيف سبليت — المطبخ' : 'فرن الشاورما — الفرع الرئيسي');
-  $('aCodeLabel').textContent = veh ? 'رقم اللوحة' : 'الرقم التسلسلي / الموديل';
-  document.querySelectorAll('#assetModal .veh-a').forEach(function(el){ el.classList.toggle('hidden', !veh); });
+  $('aCodeLabel').textContent = LB(c).code;
+  $('aDriverLabel').textContent = LB(c).personDef; $('aYearLabel').textContent = LB(c).year;
   $('aName').value = a ? a.name : ''; $('aCode').value = a ? (a.code || '') : ''; if (a && a.branch) ensureOption('aBranch', a.branch); $('aBranch').value = a ? (a.branch || '') : '';
   $('aDriver').value = a ? (a.driver || '') : ''; $('aYear').value = a ? (a.year || '') : ''; $('aNotes').value = a ? (a.notes || '') : '';
   openModal('assetModal'); setTimeout(function(){ $('aName').focus(); }, 60);
@@ -1060,8 +1070,8 @@ function printRecord(id){
     ['القسم', c.name || ''], [c.asset || 'الأصل', r.assetName + (r.assetCode ? ' — ' + r.assetCode : '')],
     ['تاريخ الصيانة', fmtDate(r.date)], ['الفرع', r.branch || '—']
   ];
-  if (veh) info.push(['السائق', r.driver || '—'], ['عداد الكيلومترات', r.odometer ? fmt(r.odometer) + ' كم' : '—']);
-  info.push(['الورشة', r.workshop || '—'], [veh ? 'الميكانيكي' : 'الفني', r.technician || '—']);
+  info.push([LB(c).person, r.driver || '—'], [LB(c).meter, r.odometer ? fmt(r.odometer) + LB(c).unit : '—']);
+  info.push(['الورشة', r.workshop || '—'], [LB(c).tech, r.technician || '—']);
   var rows = '';
   for (var i = 0; i < info.length; i += 2) {
     rows += '<tr><td class="k">' + esc(info[i][0]) + '</td><td>' + esc(info[i][1]) + '</td>' +
@@ -1078,7 +1088,7 @@ function printRecord(id){
     '<tr class="tot"><td>الإجمالي</td><td colspan="3" class="num big">' + fmt(r.total) + '</td></tr></tbody></table>' +
     (r.nextDue || r.notes ? '<h2>ملاحظات</h2><div class="box">' + (r.nextDue ? '<b>الصيانة القادمة:</b> ' + fmtDate(r.nextDue) + (r.notes ? '<br>' : '') : '') + esc(r.notes || '').replace(/\n/g, '<br>') + '</div>' : '') +
     '<div id="__imgs"></div>' +
-    '<div class="sign"><div>' + (veh ? 'السائق' : 'المستلم') + '</div><div>مسؤول الصيانة</div><div>المدير</div></div>';
+    '<div class="sign"><div>' + LB(c).person + '</div><div>مسؤول الصيانة</div><div>المدير</div></div>';
   var title = 'نموذج صيانة — ' + (c.name || '');
   if (!r.filesCount) return printDoc(title, body);
   loadFiles(r.id).then(function(fs){
@@ -1097,12 +1107,12 @@ function printRecords(){
   if ($('fSearch').value.trim()) f.push('بحث: ' + $('fSearch').value.trim());
   var total = rows.reduce(function(s, r){ return s + n(r.total); }, 0);
   var body = '<div class="box" style="margin-bottom:10px">' + (f.length ? esc(f.join(' · ')) + ' · ' : '') + 'عدد الصيانات: <b>' + rows.length + '</b> · الإجمالي: <b>' + fmt(total) + '</b></div>' +
-    '<table><thead><tr><th>#</th><th>التاريخ</th><th>' + esc(c.asset || 'الأصل') + '</th>' + (veh ? '<th>السائق</th>' : '') + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th></tr></thead><tbody>' +
+    '<table><thead><tr><th>#</th><th>التاريخ</th><th>' + esc(c.asset || 'الأصل') + '</th>' + '<th>' + LB(c).person + '</th>' + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th></tr></thead><tbody>' +
     rows.map(function(r, i){
-      return '<tr><td>' + (i + 1) + '</td><td class="num">' + fmtDate(r.date) + '</td><td>' + esc(r.assetName) + (veh && r.odometer ? '<br><span class="muted">' + fmt(r.odometer) + ' كم</span>' : '') + '</td>' +
-        (veh ? '<td>' + esc(r.driver || '—') + '</td>' : '') + '<td>' + esc(r.fault) + '</td><td>' + esc(partsText(r) || '—') + '</td><td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td></tr>';
+      return '<tr><td>' + (i + 1) + '</td><td class="num">' + fmtDate(r.date) + '</td><td>' + esc(r.assetName) + (r.odometer ? '<br><span class="muted">' + fmt(r.odometer) + LB(c).unit + '</span>' : '') + '</td>' +
+        '<td>' + esc(r.driver || '—') + '</td>' + '<td>' + esc(r.fault) + '</td><td>' + esc(partsText(r) || '—') + '</td><td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td></tr>';
     }).join('') +
-    '<tr class="tot"><td colspan="' + (veh ? 8 : 7) + '">الإجمالي</td><td class="num">' + fmt(total) + '</td></tr></tbody></table>';
+    '<tr class="tot"><td colspan="8">الإجمالي</td><td class="num">' + fmt(total) + '</td></tr></tbody></table>';
   printDoc('سجل ' + c.name, body);
 }
 
@@ -1114,9 +1124,9 @@ function exportCsv(){
   var c = catById(curCat), veh = isVeh(c), rows = filteredRecords();
   if (!rows.length) return toast('لا توجد سجلات للتصدير', 'err');
   var q = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-  var head = ['التاريخ', c.asset || 'الأصل', veh ? 'رقم اللوحة' : 'الرقم'].concat(veh ? ['السائق', 'العداد'] : [], ['العطل', 'قطع الغيار', 'موردو القطع', 'أرقام الفواتير', 'الورشة', 'الفني', 'تكلفة القطع', 'الأجرة', 'الإجمالي', 'الفرع', 'الصيانة القادمة', 'ملاحظات']);
+  var head = ['التاريخ', c.asset || 'الأصل', LB(c).code].concat([LB(c).person, LB(c).meterShort], ['العطل', 'قطع الغيار', 'موردو القطع', 'أرقام الفواتير', 'الورشة', 'الفني', 'تكلفة القطع', 'الأجرة', 'الإجمالي', 'الفرع', 'الصيانة القادمة', 'ملاحظات']);
   var lines = rows.map(function(r){
-    return [r.date, r.assetName, r.assetCode].concat(veh ? [r.driver, r.odometer || ''] : [], [r.fault, partsText(r), uniq((r.parts || []).map(function(p){ return p.supplier; })).join('، '), uniq((r.parts || []).map(function(p){ return p.invoice; })).join('، '), r.workshop, r.technician, r.partsCost, r.labor, r.total, r.branch, r.nextDue, r.notes]).map(q).join(',');
+    return [r.date, r.assetName, r.assetCode].concat([r.driver, r.odometer || ''], [r.fault, partsText(r), uniq((r.parts || []).map(function(p){ return p.supplier; })).join('، '), uniq((r.parts || []).map(function(p){ return p.invoice; })).join('، '), r.workshop, r.technician, r.partsCost, r.labor, r.total, r.branch, r.nextDue, r.notes]).map(q).join(',');
   });
   var csv = '﻿' + head.map(q).join(',') + '\n' + lines.join('\n');
   var a = document.createElement('a');
