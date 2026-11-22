@@ -254,6 +254,7 @@
         <div class="f"><label>مكان الصيانة (الورشة)</label><input id="rWorkshop" list="dlWorkshops" placeholder="اسم الورشة / الشركة"></div>
         <div class="f"><label id="rTechLabel">الفني</label><input id="rTech" list="dlTechs" placeholder="اسم الصنايعي"></div>
         <div class="f"><label>أجرة اليد</label><input id="rLabor" type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal()"></div>
+        <div class="f"><label>طريقة الدفع</label><select id="rPay"><option value="">— اختر —</option><option>نقداً (كاش)</option><option>شبكة / مدى</option><option>تحويل بنكي</option><option>آجل (على الحساب)</option><option>من العهدة</option></select></div>
         <div class="f"><label>الفرع</label><select id="rBranch"></select></div>
         <div class="f"><label>الصيانة القادمة (اختياري)</label><input id="rNext" type="date"><div class="hint">تظهر في التنبيهات قبل موعدها بأسبوع</div></div>
         <div class="f"><label>&nbsp;</label><div class="total-box"><span>القطع: <b id="tParts">0</b></span><span>الإجمالي: <b id="tTotal" style="color:var(--ui-accent)">0</b></span></div></div>
@@ -594,6 +595,8 @@ function openRecord(id, assetId){
   $('rWorkshop').value = r ? (r.workshop || '') : '';
   $('rTech').value = r ? (r.technician || '') : '';
   $('rLabor').value = r && r.labor ? r.labor : '';
+  if (r && r.payment) ensureOption('rPay', r.payment);
+  $('rPay').value = r ? (r.payment || '') : '';
   if (r && r.branch) ensureOption('rBranch', r.branch);
   $('rBranch').value = r ? (r.branch || '') : '';
   $('rNext').value = r ? (r.nextDue || '') : '';
@@ -711,7 +714,7 @@ function saveRecord(){
     date: $('rDate').value, fault: $('rFault').value.trim(), parts: parts,
     workshop: $('rWorkshop').value.trim(), technician: $('rTech').value.trim(),
     driver: $('rDriver').value.trim(), odometer: n($('rOdo').value),
-    partsCost: partsCost, labor: labor, total: partsCost + labor,
+    partsCost: partsCost, labor: labor, total: partsCost + labor, payment: $('rPay').value,
     branch: $('rBranch').value, nextDue: $('rNext').value || '', notes: $('rNotes').value.trim(),
     updatedAt: new Date().toISOString(), updatedBy: who()
   };
@@ -744,6 +747,7 @@ function viewRecord(id){
   rows.push(['قطع الغيار', (r.parts || []).length ? (r.parts || []).map(function(p){ return '<span class="chip">' + esc(p.name) + (n(p.qty) > 1 ? ' ×' + p.qty : '') + (p.supplier ? ' · <i class="fa-solid fa-store" style="opacity:.6"></i> ' + esc(p.supplier) : '') + (p.invoice ? ' · <i class="fa-solid fa-receipt" style="opacity:.6"></i> فاتورة ' + esc(p.invoice) : '') + (p.cost ? ' · ' + fmt(p.cost) : '') + (warrantyEnd(r, p) ? ' · <i class="fa-solid fa-shield-halved" style="color:' + (warrantyEnd(r, p) >= today() ? '#2e7d32' : '#999') + '"></i> ضمان حتى ' + fmtDate(warrantyEnd(r, p)) : '') + '</span>'; }).join(' ') : '—']);
   rows.push(['الورشة', esc(r.workshop || '—')], [LB(c).tech, esc(r.technician || '—')]);
   rows.push(['التكلفة', 'القطع ' + fmt(r.partsCost) + ' + الأجرة ' + fmt(r.labor) + ' = <b>' + fmt(r.total) + '</b>']);
+  rows.push(['طريقة الدفع', esc(r.payment || '—')]);
   if (r.branch) rows.push(['الفرع', esc(r.branch)]);
   if (r.nextDue) rows.push(['الصيانة القادمة', fmtDate(r.nextDue)]);
   if (r.notes) rows.push(['ملاحظات', esc(r.notes)]);
@@ -1085,6 +1089,7 @@ function printRecord(id){
     '<h2>العطل / نوع الصيانة</h2><div class="box">' + esc(r.fault) + '</div>' +
     '<h2>قطع الغيار المستبدلة</h2>' + partsHtml +
     '<h2>التكلفة</h2><table><tbody><tr><td class="k" style="background:#f8f9fa;font-weight:700;width:25%">قطع الغيار</td><td class="num">' + fmt(r.partsCost) + '</td><td style="background:#f8f9fa;font-weight:700;width:25%">أجرة اليد</td><td class="num">' + fmt(r.labor) + '</td></tr>' +
+    '<tr><td style="background:#f8f9fa;font-weight:700">طريقة الدفع</td><td colspan="3">' + esc(r.payment || '—') + '</td></tr>' +
     '<tr class="tot"><td>الإجمالي</td><td colspan="3" class="num big">' + fmt(r.total) + '</td></tr></tbody></table>' +
     (r.nextDue || r.notes ? '<h2>ملاحظات</h2><div class="box">' + (r.nextDue ? '<b>الصيانة القادمة:</b> ' + fmtDate(r.nextDue) + (r.notes ? '<br>' : '') : '') + esc(r.notes || '').replace(/\n/g, '<br>') + '</div>' : '') +
     '<div id="__imgs"></div>' +
@@ -1124,9 +1129,9 @@ function exportCsv(){
   var c = catById(curCat), veh = isVeh(c), rows = filteredRecords();
   if (!rows.length) return toast('لا توجد سجلات للتصدير', 'err');
   var q = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-  var head = ['التاريخ', c.asset || 'الأصل', LB(c).code].concat([LB(c).person, LB(c).meterShort], ['العطل', 'قطع الغيار', 'موردو القطع', 'أرقام الفواتير', 'الورشة', 'الفني', 'تكلفة القطع', 'الأجرة', 'الإجمالي', 'الفرع', 'الصيانة القادمة', 'ملاحظات']);
+  var head = ['التاريخ', c.asset || 'الأصل', LB(c).code].concat([LB(c).person, LB(c).meterShort], ['العطل', 'قطع الغيار', 'موردو القطع', 'أرقام الفواتير', 'الورشة', 'الفني', 'تكلفة القطع', 'الأجرة', 'الإجمالي', 'طريقة الدفع', 'الفرع', 'الصيانة القادمة', 'ملاحظات']);
   var lines = rows.map(function(r){
-    return [r.date, r.assetName, r.assetCode].concat([r.driver, r.odometer || ''], [r.fault, partsText(r), uniq((r.parts || []).map(function(p){ return p.supplier; })).join('، '), uniq((r.parts || []).map(function(p){ return p.invoice; })).join('، '), r.workshop, r.technician, r.partsCost, r.labor, r.total, r.branch, r.nextDue, r.notes]).map(q).join(',');
+    return [r.date, r.assetName, r.assetCode].concat([r.driver, r.odometer || ''], [r.fault, partsText(r), uniq((r.parts || []).map(function(p){ return p.supplier; })).join('، '), uniq((r.parts || []).map(function(p){ return p.invoice; })).join('، '), r.workshop, r.technician, r.partsCost, r.labor, r.total, r.payment || '', r.branch, r.nextDue, r.notes]).map(q).join(',');
   });
   var csv = '﻿' + head.map(q).join(',') + '\n' + lines.join('\n');
   var a = document.createElement('a');
