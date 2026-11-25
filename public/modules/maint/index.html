@@ -159,7 +159,7 @@
     </div>
     <div class="ui-card">
       <div class="ui-card-h"><span><i class="fa-solid fa-clock-rotate-left"></i> آخر الصيانات</span></div>
-      <div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>القسم</th><th>الأصل</th><th>العطل</th><th>الورشة</th><th>التكلفة</th><th></th></tr></thead><tbody id="recentBody"></tbody></table></div>
+      <div class="tbl-wrap"><table><thead><tr><th>التاريخ</th><th>القسم</th><th>الأصل</th><th>الفرع</th><th>العطل</th><th>الورشة</th><th>التكلفة</th><th></th></tr></thead><tbody id="recentBody"></tbody></table></div>
     </div>
   </section>
 
@@ -176,6 +176,7 @@
       <div class="filters">
         <input id="fSearch" placeholder="بحث: عطل، قطعة، ورشة، فني..." oninput="renderRecords()">
         <select id="fAsset" onchange="renderRecords()"></select>
+        <select id="fBranch" onchange="renderRecords()"></select>
         <input id="fFrom" type="date" onchange="renderRecords()" title="من تاريخ">
         <input id="fTo" type="date" onchange="renderRecords()" title="إلى تاريخ">
       </div>
@@ -525,9 +526,9 @@ function renderDash(){
   var recent = records.slice(0, 10);
   $('recentBody').innerHTML = recent.length ? recent.map(function(r){
     var c = catById(r.category) || {};
-    return '<tr><td class="num">' + fmtDate(r.date) + '</td><td><i class="fa-solid ' + esc(c.icon) + ' muted"></i> ' + esc(c.name || '') + '</td><td>' + esc(r.assetName) + '</td><td>' + esc(r.fault) + '</td><td>' + esc(r.workshop || '—') + '</td><td class="num">' + fmt(r.total) + '</td>' +
+    return '<tr><td class="num">' + fmtDate(r.date) + '</td><td><i class="fa-solid ' + esc(c.icon) + ' muted"></i> ' + esc(c.name || '') + '</td><td>' + esc(r.assetName) + '</td><td>' + esc(r.branch || '—') + '</td><td>' + esc(r.fault) + '</td><td>' + esc(r.workshop || '—') + '</td><td class="num">' + fmt(r.total) + '</td>' +
       '<td class="acts"><button class="icon-btn" title="عرض" onclick="viewRecord(\'' + r.id + '\')"><i class="fa-solid fa-eye"></i></button></td></tr>';
-  }).join('') : '<tr><td colspan="7" class="empty"><i class="fa-solid fa-screwdriver-wrench"></i>لا توجد صيانات بعد — اضغط "صيانة جديدة"</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty"><i class="fa-solid fa-screwdriver-wrench"></i>لا توجد صيانات بعد — اضغط "صيانة جديدة"</td></tr>';
 }
 
 // ── صفحة القسم ───────────────────────────────────────────
@@ -550,6 +551,9 @@ function renderCat(){
   var fa = $('fAsset'), cur = fa.value;
   fa.innerHTML = '<option value="">كل ' + esc(plural) + '</option>' + catAssets.map(function(a){ return '<option value="' + a.id + '">' + esc(assetLabel(a)) + '</option>'; }).join('');
   if (cur && catAssets.some(function(a){ return a.id === cur; })) fa.value = cur;
+  var fb = $('fBranch'), curB = fb.value, bl = uniq(branches.concat(records.filter(function(r){ return r.category === c.id; }).map(function(r){ return r.branch; })));
+  fb.innerHTML = '<option value="">كل الفروع</option>' + bl.map(function(b){ return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('');
+  if (curB && bl.indexOf(curB) >= 0) fb.value = curB;
   if (curTab === 'records') renderRecords(); else renderAssets();
 }
 function assetLabel(a){ return a.name + (a.code ? ' — ' + a.code : ''); }
@@ -558,6 +562,7 @@ function filteredRecords(){
   return records.filter(function(r){
     if (r.category !== c.id) return false;
     if (aid && r.assetId !== aid) return false;
+    if ($('fBranch').value && r.branch !== $('fBranch').value) return false;
     if (from && r.date < from) return false;
     if (to && r.date > to) return false;
     if (q) { var hay = norm([r.assetName, r.fault, r.workshop, r.technician, r.driver, r.notes, partsText(r), (r.parts || []).map(function(p){ return (p.supplier || '') + ' ' + (p.invoice || ''); }).join(' ')].join(' ')); if (hay.indexOf(q) === -1) return false; }
@@ -567,10 +572,10 @@ function filteredRecords(){
 function renderRecords(){
   var c = catById(curCat), veh = isVeh(c), rows = filteredRecords();
   $('recCount').textContent = '(' + rows.length + ')';
-  $('recHead').innerHTML = '<tr><th>التاريخ</th><th>' + esc(c.asset || 'الأصل') + '</th>' + '<th>' + LB(c).person + '</th>' + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th><th></th></tr>';
-  var cols = 9;
+  $('recHead').innerHTML = '<tr><th>التاريخ</th><th>الفرع</th><th>' + esc(c.asset || 'الأصل') + '</th>' + '<th>' + LB(c).person + '</th>' + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th><th></th></tr>';
+  var cols = 10;
   $('recBody').innerHTML = rows.length ? rows.map(function(r){
-    return '<tr><td class="num">' + fmtDate(r.date) + (r.branch ? '<div class="muted" style="font-size:.75rem">' + esc(r.branch) + '</div>' : '') + '</td><td><b>' + esc(r.assetName) + '</b>' + (r.odometer ? '<div class="muted">' + fmt(r.odometer) + LB(c).unit + '</div>' : '') + '</td>' +
+    return '<tr><td class="num">' + fmtDate(r.date) + '</td><td>' + esc(r.branch || '—') + '</td><td><b>' + esc(r.assetName) + '</b>' + (r.odometer ? '<div class="muted">' + fmt(r.odometer) + LB(c).unit + '</div>' : '') + '</td>' +
       '<td>' + esc(r.driver || '—') + '</td>' +
       '<td>' + esc(r.fault) + (r.filesCount ? ' <i class="fa-solid fa-paperclip muted" title="' + r.filesCount + ' مرفق"></i>' : '') + '</td><td>' + (partsText(r) ? '<span class="muted" style="font-size:.8rem;color:var(--ui-text2)">' + esc(partsText(r)) + '</span>' : '—') + '</td>' +
       '<td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td>' +
@@ -1183,16 +1188,17 @@ function printRecords(){
   if (!rows.length) return toast('لا توجد سجلات للطباعة', 'err');
   var f = [], a = assetById($('fAsset').value);
   if (a) f.push(c.asset + ': ' + a.name);
+  if ($('fBranch').value) f.push('الفرع: ' + $('fBranch').value);
   if ($('fFrom').value || $('fTo').value) f.push('الفترة: ' + ($('fFrom').value ? fmtDate($('fFrom').value) : 'البداية') + ' — ' + ($('fTo').value ? fmtDate($('fTo').value) : 'اليوم'));
   if ($('fSearch').value.trim()) f.push('بحث: ' + $('fSearch').value.trim());
   var total = rows.reduce(function(s, r){ return s + n(r.total); }, 0);
   var body = '<div class="box" style="margin-bottom:10px">' + (f.length ? esc(f.join(' · ')) + ' · ' : '') + 'عدد الصيانات: <b>' + rows.length + '</b> · الإجمالي: <b>' + fmt(total) + '</b></div>' +
-    '<table><thead><tr><th>#</th><th>التاريخ</th><th>' + esc(c.asset || 'الأصل') + '</th>' + '<th>' + LB(c).person + '</th>' + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th></tr></thead><tbody>' +
+    '<table><thead><tr><th>#</th><th>التاريخ</th><th>الفرع</th><th>' + esc(c.asset || 'الأصل') + '</th>' + '<th>' + LB(c).person + '</th>' + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th></tr></thead><tbody>' +
     rows.map(function(r, i){
-      return '<tr><td>' + (i + 1) + '</td><td class="num">' + fmtDate(r.date) + '</td><td>' + esc(r.assetName) + (r.odometer ? '<br><span class="muted">' + fmt(r.odometer) + LB(c).unit + '</span>' : '') + '</td>' +
+      return '<tr><td>' + (i + 1) + '</td><td class="num">' + fmtDate(r.date) + '</td><td>' + esc(r.branch || '—') + '</td><td>' + esc(r.assetName) + (r.odometer ? '<br><span class="muted">' + fmt(r.odometer) + LB(c).unit + '</span>' : '') + '</td>' +
         '<td>' + esc(r.driver || '—') + '</td>' + '<td>' + esc(r.fault) + '</td><td>' + esc(partsText(r) || '—') + '</td><td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td></tr>';
     }).join('') +
-    '<tr class="tot"><td colspan="8">الإجمالي</td><td class="num">' + fmt(total) + '</td></tr></tbody></table>';
+    '<tr class="tot"><td colspan="9">الإجمالي</td><td class="num">' + fmt(total) + '</td></tr></tbody></table>';
   printDoc('سجل ' + c.name, body);
 }
 
