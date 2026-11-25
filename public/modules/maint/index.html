@@ -241,7 +241,8 @@
       <input type="hidden" id="rId">
       <div class="grid">
         <div class="f"><label>القسم <span class="req">*</span></label><select id="rCat" onchange="onRecCatChange()"></select></div>
-        <div class="f span2"><label id="rAssetLabel">الأصل <span class="req">*</span></label><select id="rAsset" onchange="onRecAssetChange()"></select></div>
+        <div class="f"><label id="rAssetLabel">الأصل <span class="req">*</span></label><select id="rAsset" onchange="onRecAssetChange()"></select></div>
+        <div class="f"><label><i class="fa-solid fa-code-branch" style="opacity:.6"></i> الفرع</label><select id="rBranch" onchange="onBranchChange(this)"></select></div>
         <div class="f"><label id="rDriverLabel">السائق</label><input id="rDriver" list="dlDrivers" placeholder="الاسم"></div>
         <div class="f"><label id="rOdoLabel">عداد الكيلومترات</label><input id="rOdo" type="number" min="0" placeholder="مثال: 125000"><div class="hint" id="odoHint"></div></div>
         <div class="f"><label>تاريخ الصيانة <span class="req">*</span></label><input id="rDate" type="date"></div>
@@ -260,7 +261,6 @@
         <div class="f"><label id="rTechLabel">الفني</label><input id="rTech" list="dlTechs" placeholder="اسم الصنايعي"></div>
         <div class="f"><label>أجرة اليد</label><input id="rLabor" type="number" min="0" step="0.01" placeholder="0" oninput="calcTotal()"></div>
         <div class="f"><label>طريقة الدفع</label><select id="rPay" onchange="onPayChange()"></select></div>
-        <div class="f"><label>الفرع</label><select id="rBranch"></select></div>
         <div class="f"><label>الصيانة القادمة (اختياري)</label><input id="rNext" type="date"><div class="hint">تظهر في التنبيهات قبل موعدها بأسبوع</div></div>
         <div class="f"><label>&nbsp;</label><div class="total-box"><span>القطع: <b id="tParts">0</b></span><span>الإجمالي: <b id="tTotal" style="color:var(--ui-accent)">0</b></span></div></div>
         <div class="f span3"><label>ملاحظات</label><textarea id="rNotes" placeholder="أي تفاصيل إضافية..."></textarea></div>
@@ -295,7 +295,7 @@
       <div class="grid" style="grid-template-columns:1fr 1fr">
         <div class="f span3"><label id="aNameLabel">الاسم / النوع <span class="req">*</span></label><input id="aName" placeholder=""></div>
         <div class="f"><label id="aCodeLabel">رقم اللوحة</label><input id="aCode"></div>
-        <div class="f"><label>الفرع</label><select id="aBranch"></select></div>
+        <div class="f"><label>الفرع</label><select id="aBranch" onchange="onBranchChange(this)"></select></div>
         <div class="f"><label id="aDriverLabel">السائق الافتراضي</label><input id="aDriver" list="dlDrivers"></div>
         <div class="f"><label id="aYearLabel">سنة الصنع</label><input id="aYear" type="number" min="1980" max="2100"></div>
         <div class="f span3"><label>ملاحظات</label><textarea id="aNotes"></textarea></div>
@@ -442,12 +442,20 @@ function refreshLists(){
   fillDatalist('dlParts', uniq([].concat.apply([], records.map(function(r){ return (r.parts || []).map(function(p){ return p.name; }); }))));
   fillDatalist('dlDrivers', uniq(records.map(function(r){ return r.driver; }).concat(assets.map(function(a){ return a.driver; }), employees)));
 }
-function ensureOption(id, v){ var el = $(id); if (v && !Array.prototype.some.call(el.options, function(o){ return o.value === v; })) { var o = document.createElement('option'); o.value = v; o.textContent = v; el.appendChild(o); } }
+function ensureOption(id, v){ var el = $(id); if (v && !Array.prototype.some.call(el.options, function(o){ return o.value === v; })) { var o = document.createElement('option'); o.value = v; o.textContent = v; var last = el.options[el.options.length - 1]; if (last && last.value.indexOf('__new') === 0) el.insertBefore(o, last); else el.appendChild(o); } }
+function onBranchChange(el){
+  if (el.value !== '__newBranch') return;
+  var name = (prompt('اسم الفرع الجديد:') || '').replace(/\s+/g, ' ').trim();
+  if (!name) { el.value = ''; return; }
+  ensureOption(el.id, name); el.value = name;
+  if (window.AllShared) AllShared.branches.add(name).then(function(){ toast('تمت إضافة الفرع "' + name + '" ✓', 'ok'); }).catch(function(e){ toast('تعذّر إضافة الفرع: ' + e.message, 'err'); });
+}
 function fillBranchSelects(){
   ['rBranch', 'aBranch'].forEach(function(id){
     var el = $(id), cur = el.value;
-    el.innerHTML = '<option value="">— بدون —</option>' + branches.map(function(b){ return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('');
-    if (cur) el.value = cur;
+    el.innerHTML = '<option value="">— اختر الفرع —</option>' + branches.map(function(b){ return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('') +
+      '<option value="__newBranch">＋ إضافة فرع جديد...</option>';
+    if (cur && cur !== '__newBranch') { ensureOption(id, cur); el.value = cur; }
   });
 }
 
@@ -562,7 +570,7 @@ function renderRecords(){
   $('recHead').innerHTML = '<tr><th>التاريخ</th><th>' + esc(c.asset || 'الأصل') + '</th>' + '<th>' + LB(c).person + '</th>' + '<th>العطل</th><th>قطع الغيار</th><th>الورشة</th><th>الفني</th><th>التكلفة</th><th></th></tr>';
   var cols = 9;
   $('recBody').innerHTML = rows.length ? rows.map(function(r){
-    return '<tr><td class="num">' + fmtDate(r.date) + '</td><td><b>' + esc(r.assetName) + '</b>' + (r.odometer ? '<div class="muted">' + fmt(r.odometer) + LB(c).unit + '</div>' : '') + '</td>' +
+    return '<tr><td class="num">' + fmtDate(r.date) + (r.branch ? '<div class="muted" style="font-size:.75rem">' + esc(r.branch) + '</div>' : '') + '</td><td><b>' + esc(r.assetName) + '</b>' + (r.odometer ? '<div class="muted">' + fmt(r.odometer) + LB(c).unit + '</div>' : '') + '</td>' +
       '<td>' + esc(r.driver || '—') + '</td>' +
       '<td>' + esc(r.fault) + (r.filesCount ? ' <i class="fa-solid fa-paperclip muted" title="' + r.filesCount + ' مرفق"></i>' : '') + '</td><td>' + (partsText(r) ? '<span class="muted" style="font-size:.8rem;color:var(--ui-text2)">' + esc(partsText(r)) + '</span>' : '—') + '</td>' +
       '<td>' + esc(r.workshop || '—') + '</td><td>' + esc(r.technician || '—') + '</td><td class="num">' + fmt(r.total) + '</td>' +
@@ -725,7 +733,7 @@ function saveRecord(){
     workshop: $('rWorkshop').value.trim(), technician: $('rTech').value.trim(),
     driver: $('rDriver').value.trim(), odometer: n($('rOdo').value),
     partsCost: partsCost, labor: labor, total: partsCost + labor, payment: $('rPay').value === '__new' ? '' : $('rPay').value,
-    branch: $('rBranch').value, nextDue: $('rNext').value || '', notes: $('rNotes').value.trim(),
+    branch: $('rBranch').value === '__newBranch' ? '' : $('rBranch').value, nextDue: $('rNext').value || '', notes: $('rNotes').value.trim(),
     updatedAt: new Date().toISOString(), updatedBy: who()
   };
   if (!id) { data.createdAt = data.updatedAt; data.createdBy = who(); }
@@ -796,7 +804,7 @@ function openAsset(id, catId, fromRecord){
 function saveAsset(){
   var id = $('aId').value, name = $('aName').value.trim(), catId = $('assetModal').dataset.cat;
   if (!name) return toast('أدخل الاسم', 'err');
-  var data = { category: catId, name: name, code: $('aCode').value.trim(), branch: $('aBranch').value, driver: $('aDriver').value.trim(),
+  var data = { category: catId, name: name, code: $('aCode').value.trim(), branch: $('aBranch').value === '__newBranch' ? '' : $('aBranch').value, driver: $('aDriver').value.trim(),
     year: $('aYear').value || '', notes: $('aNotes').value.trim(), active: true, updatedAt: new Date().toISOString() };
   var ref = id ? db.collection('maint_assets').doc(id) : db.collection('maint_assets').doc();
   if (!id) { data.createdAt = data.updatedAt; data.createdBy = who(); }
